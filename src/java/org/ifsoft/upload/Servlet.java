@@ -78,7 +78,7 @@ public class Servlet extends HttpServlet
 
         if (name.endsWith(".zip") || name.endsWith(".h5p"))
         {
-            Path path = Paths.get( ".", "upload." + System.currentTimeMillis() + "." + name);
+            Path path = Paths.get( "/tmp", "upload." + System.currentTimeMillis() + "." + name);
 
             try {
                 writeFile(path, request);

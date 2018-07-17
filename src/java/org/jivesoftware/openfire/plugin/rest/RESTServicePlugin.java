@@ -23,6 +23,7 @@ import java.net.*;
 import java.util.concurrent.*;
 import java.lang.reflect.*;
 import java.security.Security;
+import java.security.cert.Certificate;
 
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -33,17 +34,22 @@ import java.nio.file.Paths;
 import javax.servlet.DispatcherType;
 import javax.ws.rs.core.Response;
 
-import org.jivesoftware.openfire.*;
-import org.jivesoftware.openfire.user.*;
-import org.jivesoftware.openfire.event.*;
-import org.jivesoftware.openfire.group.*;
-import org.jivesoftware.openfire.muc.*;
-import org.jivesoftware.openfire.session.*;
 import org.jivesoftware.openfire.container.Plugin;
 import org.jivesoftware.openfire.container.PluginManager;
 import org.jivesoftware.openfire.http.HttpBindManager;
 import org.jivesoftware.openfire.auth.AuthFactory;
 import org.jivesoftware.openfire.net.SASLAuthentication;
+import org.jivesoftware.openfire.session.LocalClientSession;
+import org.jivesoftware.openfire.net.VirtualConnection;
+import org.jivesoftware.openfire.auth.UnauthorizedException;
+import org.jivesoftware.openfire.auth.AuthToken;
+import org.jivesoftware.openfire.auth.AuthFactory;
+import org.jivesoftware.openfire.user.*;
+import org.jivesoftware.openfire.event.*;
+import org.jivesoftware.openfire.group.*;
+import org.jivesoftware.openfire.muc.*;
+import org.jivesoftware.openfire.session.*;
+import org.jivesoftware.openfire.*;
 
 import org.jivesoftware.openfire.plugin.rest.sasl.*;
 import org.jivesoftware.openfire.plugin.rest.service.JerseyWrapper;
@@ -67,6 +73,7 @@ import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.servlet.*;
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.eclipse.jetty.fcgi.server.proxy.*;
+import org.eclipse.jetty.proxy.ProxyServlet;
 
 import org.eclipse.jetty.util.security.*;
 import org.eclipse.jetty.security.*;
@@ -118,6 +125,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
     private BookmarkInterceptor bookmarkInterceptor;
     private ServletContextHandler context;
     private ServletContextHandler context2;
+    private HashMap<String, ServletContextHandler> proxyContexts;
 
     private WebAppContext context3;
     private WebAppContext context4;
@@ -128,6 +136,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     private ExecutorService executor;
     private Plugin ofswitch = null;
+    private AdminConnection adminConnection = null;
 
 
     /**
@@ -286,20 +295,41 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         context6.setWelcomeFiles(new String[]{"index.jsp"});
         HttpBindManager.getInstance().addJettyHandler(context6);
 
-        Log.info("Initialize Email Listener");
+        proxyContexts = new HashMap<String, ServletContextHandler>();
 
+        List<String> properties = JiveGlobals.getPropertyNames();
+        List<String> deletes = new ArrayList<String>();
+
+        for (String propertyName : properties) {
+
+            if (propertyName.indexOf("ofchat.reverse.proxy.") == 0)
+            {
+                String appName = propertyName.substring(21);
+                String url = JiveGlobals.getProperty(propertyName);
+
+                Log.info("Initialize Reverse proxy " + appName + "\n" + url);
+
+                ServletContextHandler proxyContext = new ServletContextHandler(null, "/" + appName, ServletContextHandler.SESSIONS);
+                ServletHolder proxyServlet = new ServletHolder(ProxyServlet.Transparent.class);
+                proxyServlet.setInitParameter("proxyTo", url);
+                proxyServlet.setInitParameter("prefix", "/");
+                proxyContext.addServlet(proxyServlet, "/*");
+
+                HttpBindManager.getInstance().addJettyHandler(proxyContext);
+                proxyContexts.put(propertyName, proxyContext);
+            }
+        }
+
+        Log.info("Initialize Email Listener");
         EmailListener.getInstance().start();
 
         Log.info("Initialize preffered property default values");
-
         JiveGlobals.setProperty("route.all-resources", "true");     // send chat messages to all resources
-
         JiveGlobals.setProperty("ofmeet.buttons.implemented", "microphone, camera, desktop, invite, fullscreen, fodeviceselection, hangup, profile, dialout, addtocall, contacts, info, chat, recording, sharedvideo, settings, raisehand, videoquality, filmstrip");
         JiveGlobals.setProperty("ofmeet.buttons.enabled", "microphone, camera, desktop, invite, fullscreen, fodeviceselection, hangup, profile, dialout, addtocall, contacts, info, chat, recording, sharedvideo, settings, raisehand, videoquality, filmstrip");
         JiveGlobals.setProperty("org.jitsi.videobridge.ofmeet.inviteOptions", "invite, dialout, addtocall");
         JiveGlobals.setProperty("org.jitsi.videobridge.ofmeet.chrome.extension.id", "fmgnibblgekonbgjhkjicekgacgoagmm");
         JiveGlobals.setProperty("org.jitsi.videobridge.ofmeet.min.chrome.ext.ver", "0.0.1");
-
         JiveGlobals.setProperty("uport.clientid.etherlynk.2ofdeAidaU2mjJ5X8r1CgH2RdPb9qKVS9pc", "1b561603d69de7091fa9cee632741f7f313b4dd39bc328d38dc514bbb5f184e3");
         JiveGlobals.setProperty("uport.clientid.pade.2p1psGHt9J5NBdPDQejSVhpsECXLxLaVQSo", "46445273c02e4c0594ef6a441ecbcd327f0f78ba58b3139e027f0b23c199ea5f");
 
@@ -383,12 +413,21 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         Log.info("Create recordings folder");
         checkRecordingsFolder();
 
+        if ( JiveGlobals.getBooleanProperty("ofchat.adhoc.commands.enabled", false) )
+        {
+            Log.info("Create admin session for ad-hoc commands");
+            adminConnection = new AdminConnection();
+        }
+
     }
 
     /* (non-Javadoc)
      * @see org.jivesoftware.openfire.container.Plugin#destroyPlugin()
      */
     public void destroyPlugin() {
+
+        if (adminConnection != null) adminConnection.close();
+
         // Stop listening to system property events
         PropertyEventDispatcher.removeListener(this);
 
@@ -406,6 +445,11 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         HttpBindManager.getInstance().removeJettyHandler(context4);
         HttpBindManager.getInstance().removeJettyHandler(context5);
         HttpBindManager.getInstance().removeJettyHandler(context6);
+
+        for (String key : proxyContexts.keySet())
+        {
+            HttpBindManager.getInstance().removeJettyHandler(proxyContexts.get(key));
+        }
 
         executor.shutdown();
         EmailListener.getInstance().stop();
@@ -1078,5 +1122,128 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
                 }
             }
         });
+    }
+
+/*
+    <iq type='get'
+        to='workgroup.peebx.4ng.net'
+        from='admin@peebx.4ng.net'>
+      <query xmlns='http://jabber.org/protocol/disco#info'/>
+    </iq>
+
+    <iq type='get'
+        to='workgroup.peebx.4ng.net'
+        from='admin@peebx.4ng.net'>
+      <query xmlns='http://jabber.org/protocol/disco#items'
+             node='http://jabber.org/protocol/commands'/>
+    </iq>
+
+    <iq type='get'
+        to='workgroup.peebx.4ng.net'
+        from='admin@peebx.4ng.net'>
+      <query xmlns='http://jabber.org/protocol/disco#info'
+             node='http://jabber.org/protocol/admin#add-workgroup'/>
+    </iq>
+
+    <iq type='set' to='workgroup.peebx.4ng.net'>
+      <command xmlns='http://jabber.org/protocol/commands' sessionid='DYAHDC3ZMbKdAnQ' node='http://jabber.org/protocol/admin#add-workgroup'>
+        <x xmlns='jabber:x:data' type='submit'>
+          <field var='FORM_TYPE'>
+            <value>http://jabber.org/protocol/admin</value>
+          </field>
+          <field var='name'>
+            <value>test123</value>
+          </field>
+          <field var='members'>
+            <value>dele.olajide</value>
+            <value>deleo</value>
+          </field>
+          <field var='description'>
+            <value>Workgroup for test123</value>
+          </field>
+        </x>
+      </command>
+    </iq>
+*/
+
+    public class AdminConnection extends VirtualConnection
+    {
+        private SessionPacketRouter router;
+        private String remoteAddr;
+        private String hostName;
+        private LocalClientSession session;
+        private boolean isSecure = false;
+        private String username = "admin";
+
+        public AdminConnection()
+        {
+            this.remoteAddr = "0.0.0.0";
+            this.hostName = username;
+
+            try {
+                AuthToken authToken = new AuthToken(username);
+                session = SessionManager.getInstance().createClientSession(this, (Locale) null );
+                this.router = new SessionPacketRouter(session);
+                session.setAuthToken(authToken, "ofchat");
+
+            } catch (Exception e) {
+                Log.error("AdminConnection", e);
+            }
+        }
+
+        public boolean isSecure() {
+            return isSecure;
+        }
+
+        public void setSecure(boolean isSecure) {
+            this.isSecure = isSecure;
+        }
+
+        public SessionPacketRouter getRouter()
+        {
+            return router;
+        }
+
+        public void closeVirtualConnection()
+        {
+            Log.info("AdminConnection - close ");
+        }
+
+        public byte[] getAddress() {
+            return remoteAddr.getBytes();
+        }
+
+        public String getHostAddress() {
+            return remoteAddr;
+        }
+
+        public String getHostName()  {
+            return ( hostName != null ) ? hostName : "0.0.0.0";
+        }
+
+        public void systemShutdown() {
+
+        }
+
+        public void deliver(org.xmpp.packet.Packet packet) throws UnauthorizedException
+        {
+            deliverRawText(packet.toXML());
+        }
+
+        public void deliverRawText(String text)
+        {
+            Log.info("AdminConnection - deliverRawText\n" + text);
+        }
+
+        @Override
+        public org.jivesoftware.openfire.spi.ConnectionConfiguration getConfiguration()
+        {
+            return null;
+        }
+
+        public Certificate[] getPeerCertificates() {
+            return null;
+        }
+
     }
 }

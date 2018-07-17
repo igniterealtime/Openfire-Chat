@@ -60,7 +60,7 @@
 %><!DOCTYPE html>
 <html>
 <head>
-<title>Etherlynk Message Blast</title>
+<title>Message Blast</title>
 
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 <meta http-equiv="Content-type" content="text/html; charset=utf-8" />

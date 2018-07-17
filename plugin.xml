@@ -21,8 +21,8 @@
     <name>Chat API</name>
     <description>RESTful API with Server Sent Events (SSE) for Openfire Meetings</description>
     <author>Ignite Realtime</author>
-    <version>0.9.4</version>
-    <date>06/30/2018</date>
+    <version>0.9.4 Release 2</version>
+    <date>07/17/2018</date>
     <minServerVersion>4.1.5</minServerVersion>
     <minJavaVersion>1.8</minJavaVersion>    
     <adminconsole>
