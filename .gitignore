@@ -1,5 +1,5 @@
 target/
-swagger/
+swagger-dev/
 work/
 *.class
 *.cmd

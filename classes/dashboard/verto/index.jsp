@@ -60,9 +60,9 @@
 
     <meta name="description" content="Verto (VER-to) RTC is a FreeSWITCH endpoint that implements a subset of a JSON-RPC connection designed for use over secure websockets.">
     <meta name="author" content="FreeSWITCH">
-    <link rel="shortcut icon" href="icon.png" type="image/png" />
+    <link rel="shortcut icon" href="favicon.ico" type="image/png" />
 
-    <title ng-bind="'[' + title + '] ' + 'Etherlynk Verto'"></title>
+    <title ng-bind="'[' + title + '] ' + 'Verto Communicator'"></title>
     
     <!-- CSS -->
     <link rel="stylesheet" href="css/vendor.db6bd80e.css">    
