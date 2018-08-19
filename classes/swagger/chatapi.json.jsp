@@ -3913,7 +3913,7 @@
         "tags": [
             "Admin"
         ],
-        "summary": "Close/kick sessions from a user",
+        "summary": "Fetches a list of user sip accounts",
         "description": "",               
                 "consumes":[
                 ],

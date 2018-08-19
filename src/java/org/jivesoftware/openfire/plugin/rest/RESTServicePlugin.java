@@ -62,6 +62,8 @@ import org.jivesoftware.openfire.plugin.rest.exceptions.ExceptionType;
 import org.jivesoftware.openfire.plugin.rest.exceptions.ServiceException;
 import org.jivesoftware.openfire.plugin.spark.*;
 
+import org.jivesoftware.util.cache.Cache;
+import org.jivesoftware.util.cache.CacheFactory;
 import org.jivesoftware.util.JiveGlobals;
 import org.jivesoftware.util.PropertyEventDispatcher;
 import org.jivesoftware.util.PropertyEventListener;
@@ -92,6 +94,7 @@ import org.xmpp.packet.*;
 import org.dom4j.Element;
 
 import org.traderlynk.blast.MessageBlastService;
+import org.jivesoftware.openfire.sip.sipaccount.SipAccount;
 
 /**
  * The Class RESTServicePlugin.
@@ -137,6 +140,9 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
     private ExecutorService executor;
     private Plugin ofswitch = null;
     private AdminConnection adminConnection = null;
+
+    public Cache<String, SipAccount> sipCache;
+    public Cache<String, SipAccount> sipCache2;
 
 
     /**
@@ -419,6 +425,15 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             adminConnection = new AdminConnection();
         }
 
+        Log.info("Create SIP cachee");
+
+        sipCache = CacheFactory.createLocalCache("SIP Account By Extension");
+        sipCache.setMaxCacheSize(-1);
+        sipCache.setMaxLifetime(3600 * 1000);
+
+        sipCache2 = CacheFactory.createLocalCache("SIP Account By Username");
+        sipCache2.setMaxCacheSize(-1);
+        sipCache2.setMaxLifetime(3600 * 1000);
     }
 
     /* (non-Javadoc)

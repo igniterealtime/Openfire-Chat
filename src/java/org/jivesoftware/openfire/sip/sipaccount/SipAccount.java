@@ -21,6 +21,9 @@
 package org.jivesoftware.openfire.sip.sipaccount;
 
 import org.jivesoftware.util.JiveGlobals;
+import org.jivesoftware.util.cache.CacheSizes;
+import org.jivesoftware.util.cache.Cacheable;
+import org.jivesoftware.util.cache.CannotCalculateSizeException;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
@@ -33,10 +36,10 @@ import javax.xml.bind.annotation.XmlType;
  * @author Thiago Rocha Camargo
  */
 @XmlRootElement(name = "sipaccount")
-@XmlType(propOrder = { "username", "sipUsername", "authUsername", "displayName", "password", "server", "outboundproxy", "stunServer", "stunPort", "voiceMailNumber", "useStun", "enabled", "promptCredentials", "status" })
+@XmlType(propOrder = { "username", "sipUsername", "authUsername", "displayName", "password", "server", "outboundproxy",
+        "stunServer", "stunPort", "voiceMailNumber", "useStun", "enabled", "promptCredentials", "status" })
 
-public class SipAccount
-{
+public class SipAccount implements Cacheable {
     private String username = null;
     private String sipUsername = "";
     private String authUsername = "";
@@ -52,12 +55,12 @@ public class SipAccount
     private boolean promptCredentials = false;
     private SipRegisterStatus status = SipRegisterStatus.Unregistered;
 
+    public SipAccount() {
 
-	public SipAccount() {
+    }
 
-	}
-
-    public SipAccount(String username, String sipUsername, String authUsername, String displayName, String password, String server, String outboundproxy, boolean promptCredentials) {
+    public SipAccount(String username, String sipUsername, String authUsername, String displayName, String password,
+            String server, String outboundproxy, boolean promptCredentials) {
         this.username = username;
         this.sipUsername = sipUsername;
         this.authUsername = authUsername;
@@ -72,8 +75,7 @@ public class SipAccount
         this.username = username;
     }
 
-
-	@XmlElement
+    @XmlElement
     public String getAuthUsername() {
         return authUsername == null ? "" : authUsername;
     }
@@ -81,7 +83,8 @@ public class SipAccount
     public void setAuthUsername(String authUsername) {
         this.authUsername = authUsername;
     }
-	@XmlElement
+
+    @XmlElement
     public String getDisplayName() {
         return displayName == null ? "" : displayName;
     }
@@ -90,7 +93,7 @@ public class SipAccount
         this.displayName = displayName;
     }
 
-	@XmlElement
+    @XmlElement
     public boolean isEnabled() {
         return enabled;
     }
@@ -99,7 +102,7 @@ public class SipAccount
         this.enabled = enabled;
     }
 
-	@XmlElement
+    @XmlElement
     public String getVoiceMailNumber() {
         return voiceMailNumber == null ? JiveGlobals.getProperty("phone.voiceMail", "") : voiceMailNumber;
     }
@@ -108,7 +111,7 @@ public class SipAccount
         this.voiceMailNumber = voiceMailNumber;
     }
 
-	@XmlElement
+    @XmlElement
     public String getServer() {
         return server == null ? JiveGlobals.getProperty("phone.sipServer", "") : server;
     }
@@ -117,7 +120,7 @@ public class SipAccount
         this.server = server;
     }
 
-	@XmlElement
+    @XmlElement
     public String getOutboundproxy() {
         return outboundproxy;
     }
@@ -126,7 +129,7 @@ public class SipAccount
         this.outboundproxy = outboundproxy;
     }
 
-	@XmlElement
+    @XmlElement
     public String getSipUsername() {
         return sipUsername == null ? "" : sipUsername;
     }
@@ -135,7 +138,7 @@ public class SipAccount
         this.sipUsername = sipUsername;
     }
 
-	@XmlElement
+    @XmlElement
     public String getUsername() {
         return username == null ? "" : username;
     }
@@ -152,7 +155,7 @@ public class SipAccount
         this.password = password;
     }
 
-	@XmlElement
+    @XmlElement
     public String getStunPort() {
         return stunPort == null ? JiveGlobals.getProperty("phone.stunPort", "") : stunPort;
     }
@@ -161,7 +164,7 @@ public class SipAccount
         this.stunPort = stunPort;
     }
 
-	@XmlElement
+    @XmlElement
     public String getStunServer() {
         return stunServer == null ? JiveGlobals.getProperty("phone.stunServer", "") : stunServer;
     }
@@ -170,7 +173,7 @@ public class SipAccount
         this.stunServer = stunServer;
     }
 
-	@XmlElement
+    @XmlElement
     public boolean isUseStun() {
         if (stunPort == null && stunServer == null) {
             return JiveGlobals.getBooleanProperty("phone.stunEnabled", false);
@@ -182,7 +185,7 @@ public class SipAccount
         this.useStun = useStun;
     }
 
-	@XmlElement
+    @XmlElement
     public SipRegisterStatus getStatus() {
         return status == null ? SipRegisterStatus.Unregistered : status;
     }
@@ -191,12 +194,33 @@ public class SipAccount
         this.status = status;
     }
 
-	@XmlElement
+    @XmlElement
     public boolean isPromptCredentials() {
         return promptCredentials;
     }
 
     public void setPromptCredentials(boolean promptCredentials) {
         this.promptCredentials = promptCredentials;
+    }
+
+    @Override
+    public int getCachedSize() throws CannotCalculateSizeException {
+        // Approximate the size of the object in bytes by calculating the size
+        // of each field.
+        int size = 0;
+        size += CacheSizes.sizeOfObject();
+        size += CacheSizes.sizeOfString(username);
+        size += CacheSizes.sizeOfString(sipUsername);
+        size += CacheSizes.sizeOfString(authUsername);
+        size += CacheSizes.sizeOfString(displayName);
+        size += CacheSizes.sizeOfString(password);
+        size += CacheSizes.sizeOfString(server);
+        size += CacheSizes.sizeOfString(outboundproxy);
+        size += CacheSizes.sizeOfString(stunServer);
+        size += CacheSizes.sizeOfString(voiceMailNumber);
+        size += CacheSizes.sizeOfString(outboundproxy);
+        size += CacheSizes.sizeOfBoolean() * 4;
+
+        return size;
     }
 }

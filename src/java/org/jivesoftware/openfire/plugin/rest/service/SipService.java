@@ -1,5 +1,8 @@
 package org.jivesoftware.openfire.plugin.rest.service;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.annotation.PostConstruct;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -23,57 +26,57 @@ import org.jivesoftware.openfire.sip.sipaccount.SipAccountDAO;
 @Path("restapi/v1/sipaccounts")
 public class SipService {
 
-	@PostConstruct
-	public void init()
-	{
+    @PostConstruct
+    public void init()
+    {
 
-	}
+    }
 
-	@GET
-	@Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
-	public SipAccounts getSipAccounts(@DefaultValue("0") @QueryParam("start") String start, @DefaultValue("250") @QueryParam("count") String count) throws ServiceException
-	{
-		try {
-			return new SipAccounts(SipAccountDAO.getUsers(Integer.parseInt(start), Integer.parseInt(count)));
+    @GET
+    @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
+    public SipAccounts getSipAccounts(@DefaultValue("0") @QueryParam("start") String start, @DefaultValue("250") @QueryParam("count") String count) throws ServiceException
+    {
+        try {
+            return new SipAccounts(SipAccountDAO.getUsers(Integer.parseInt(start), Integer.parseInt(count)));
 
-		} catch (Exception e) {
-			throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
-		}
-	}
+        } catch (Exception e) {
+            throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+        }
+    }
 
-	@GET
-	@Path("/username/{propertyKey}")
-	@Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
-	public SipAccount getAccountByUser(@PathParam("propertyKey") String propertyKey) throws ServiceException
-	{
-		return SipAccountDAO.getAccountByUser(propertyKey);
-	}
+    @GET
+    @Path("/username/{username}")
+    @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
+    public SipAccount getAccountByUser(@PathParam("username") String username) throws ServiceException
+    {
+        return SipAccountDAO.getAccountByUser(username);
+    }
 
-	@GET
-	@Path("/extension/{propertyKey}")
-	@Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
-	public SipAccount getAccountByExtn(@PathParam("propertyKey") String propertyKey) throws ServiceException
-	{
-		return SipAccountDAO.getAccountByExtn(propertyKey);
-	}
+    @GET
+    @Path("/extension/{extension}")
+    @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
+    public SipAccount getAccountByExtn(@PathParam("extension") String extension) throws ServiceException
+    {
+        return SipAccountDAO.getAccountByExtn(extension);
+    }
 
-	@POST
-	public Response createSipAccount(SipAccount sipAccount) throws ServiceException
-	{
-		if (SipAccountDAO.getAccountByUser(sipAccount.getUsername()) != null) {
-			SipAccountDAO.update(sipAccount);
-			return Response.status(Response.Status.OK).build();
-		} else {
-			SipAccountDAO.insert(sipAccount);
-			return Response.status(Response.Status.CREATED).build();
-		}
-	}
+    @POST
+    public Response createSipAccount(SipAccount sipAccount) throws ServiceException
+    {
+        if (SipAccountDAO.getAccountByUser(sipAccount.getUsername()) != null) {
+            SipAccountDAO.update(sipAccount);
+            return Response.status(Response.Status.OK).build();
+        } else {
+            SipAccountDAO.insert(sipAccount);
+            return Response.status(Response.Status.CREATED).build();
+        }
+    }
 
-	@DELETE
-	@Path("/{propertyKey}")
-	public Response deleteUser(@PathParam("propertyKey") String propertyKey) throws ServiceException {
-		SipAccount sipAccount = SipAccountDAO.getAccountByUser(propertyKey);
-		SipAccountDAO.remove(sipAccount);
-		return Response.status(Response.Status.OK).build();
-	}
+    @DELETE
+    @Path("/{username}")
+    public Response deleteUser(@PathParam("username") String username) throws ServiceException {
+        SipAccount sipAccount = SipAccountDAO.getAccountByUser(username);
+        SipAccountDAO.remove(sipAccount);
+        return Response.status(Response.Status.OK).build();
+    }
 }

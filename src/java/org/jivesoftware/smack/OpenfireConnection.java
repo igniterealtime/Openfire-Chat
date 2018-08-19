@@ -62,6 +62,8 @@ import org.jivesoftware.openfire.auth.AuthToken;
 import org.jivesoftware.openfire.auth.AuthFactory;
 import org.jivesoftware.openfire.plugin.rest.*;
 import org.jivesoftware.openfire.plugin.rest.entity.*;
+import org.jivesoftware.openfire.sip.sipaccount.SipAccount;
+import org.jivesoftware.openfire.sip.sipaccount.SipAccountDAO;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,6 +82,7 @@ import org.eclipse.jetty.servlets.EventSourceServlet;
 
 import org.ifsoft.meet.MeetController;
 import org.jivesoftware.spark.plugin.fileupload.UploadRequest;
+
 
 /**
  * A virtual implementation of {@link XMPPConnection}, intended to be used in
@@ -313,7 +316,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
             notifyReconnection();
         }
 
-        clientServlet = new ClientServlet();
+        clientServlet = new ClientServlet(config.getUsername() + "");
         sseHolder = new ServletHolder(clientServlet);
         sseHolder.setAsyncSupported(true);
         ssePath = "/" + config.getUsername();
@@ -1408,7 +1411,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
 
             if (clientServlet != null)
             {
-                clientServlet.broadcast("chatapi.xmpp", text);
+                clientServlet.broadcast("chatapi.xmpp", "\"" + text + "\"");
             }
 
             connection.handleParser(text);
@@ -1439,6 +1442,27 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
     public class ClientServlet extends EventSourceServlet
     {
         private ClientEventSource clientEventSource = null;
+        private String username = null;
+        private String sipDomain = null;
+        private String sipProfile = null;
+        private SipAccount sipAccount = null;
+
+        public ClientServlet(String username)
+        {
+            this.username = username;
+            this.sipProfile = JiveGlobals.getProperty("freeswitch.sip.internal", "internal");
+
+            boolean freeswitchEnabled = JiveGlobals.getBooleanProperty("freeswitch.enabled", false);
+
+            if (freeswitchEnabled)
+            {
+                try {
+                    this.sipAccount = SipAccountDAO.getAccountByUser(username);
+                } catch (Exception e) {
+                    Log.error("ClientServlet", e);
+                }
+            }
+        }
 
         public void broadcast(String name, String event)
         {
@@ -1455,6 +1479,12 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
                         Log.error("could not send update to client", e);
                     }
                 }
+            }
+
+            if (sipAccount != null)
+            {
+                String json = "{\"event\": \"" + name + "\", \"payload\": " + event + "}";
+                RESTServicePlugin.getInstance().sendAsyncFWCommand("chat sip|freeswitch|" + sipProfile + "/" + sipAccount.getSipUsername() + "@" + sipAccount.getServer() + "|" + json);
             }
         }
 
