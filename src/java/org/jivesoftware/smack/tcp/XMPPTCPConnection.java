@@ -73,7 +73,7 @@ import org.jxmpp.util.XmppStringUtils;
  */
 public class XMPPTCPConnection extends AbstractXMPPConnection
 {
-	private static Logger Log = LoggerFactory.getLogger( "XMPPTCPConnection" );
+    private static Logger Log = LoggerFactory.getLogger( "XMPPTCPConnection" );
 
     private boolean reconnect = false;
     private LocalClientSession session;
@@ -139,7 +139,7 @@ public class XMPPTCPConnection extends AbstractXMPPConnection
         smackConnection = new SmackConnection(streamId, this);
 
         if (reconnect) {
-            notifyReconnection();
+            //notifyReconnection();
         }
     }
 
@@ -225,7 +225,7 @@ public class XMPPTCPConnection extends AbstractXMPPConnection
 
     private void sendPacket(TopLevelStreamElement stanza)
     {
-        sendPacket(stanza.toXML().toString());
+        sendPacket(stanza.toXML(StreamOpen.CLIENT_NAMESPACE).toString());
         firePacketSendingListeners((Stanza) stanza);
     }
 
@@ -370,7 +370,7 @@ public class XMPPTCPConnection extends AbstractXMPPConnection
         public void deliverRawText(String text)
         {
             Log.debug("SmackConnection - deliverRawText\n" + text);
-			connection.handleParser(text);
+            connection.handleParser(text);
         }
 
         @Override

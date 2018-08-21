@@ -1100,7 +1100,7 @@ public class EmailListener {
                 StanzaFilter presenceFilter = new StanzaTypeFilter(Presence.class);
                 StanzaFilter andFilter = new AndFilter(fromFilter, presenceFilter);
 
-                globalConnection.addPacketListener(new PacketListener()
+                globalConnection.addAsyncStanzaListener(new StanzaListener()
                 {
                     public void processStanza(Stanza packet)
                     {

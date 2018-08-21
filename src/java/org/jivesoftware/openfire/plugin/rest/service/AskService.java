@@ -48,10 +48,10 @@ public class AskService {
 
 /*
     {
-        "userID": "deleo",
-        "question": "hey jude",
-        "emailAddress": "deleo",
-        "workgroup": "demo"
+      "emailAddress": "patient@hospital.com",
+      "userID": "patient",
+      "question": "What is the meaning of life",
+      "workgroup": "diabetes"
     }
 */
 

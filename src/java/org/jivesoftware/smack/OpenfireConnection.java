@@ -35,7 +35,7 @@ import org.jivesoftware.util.JiveGlobals;
 import org.jivesoftware.smack.*;
 import org.jivesoftware.smack.roster.*;
 import org.jivesoftware.smack.roster.packet.*;
-import org.jivesoftware.smack.chat.*;
+import org.jivesoftware.smack.chat2.*;
 import org.jivesoftware.smack.packet.*;
 import org.jivesoftware.smack.filter.*;
 import org.jivesoftware.smack.provider.*;
@@ -48,6 +48,7 @@ import org.jivesoftware.smackx.*;
 import org.jivesoftware.smackx.workgroup.*;
 import org.jivesoftware.smackx.workgroup.user.*;
 import org.jivesoftware.smackx.workgroup.agent.*;
+import org.jivesoftware.smackx.workgroup.packet.*;
 
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.JidCreate;
@@ -95,7 +96,7 @@ import org.jivesoftware.spark.plugin.fileupload.UploadRequest;
  * @see XMPPConnection
  * @author Guenther Niess
  */
-public class OpenfireConnection extends AbstractXMPPConnection implements ChatMessageListener, ChatManagerListener, StanzaListener, RosterListener, InvitationListener, InvitationRejectionListener, OfferListener {
+public class OpenfireConnection extends AbstractXMPPConnection implements RosterListener, InvitationListener, InvitationRejectionListener, OfferListener {
     private static Logger Log = LoggerFactory.getLogger( "OpenfireConnection" );
 
     private static final ConcurrentHashMap<String, OpenfireConnection> connections = new ConcurrentHashMap<String, OpenfireConnection>();
@@ -116,7 +117,6 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
     public ConcurrentHashMap<String, Chat> chats;
     public ConcurrentHashMap<String, MultiUserChat> groupchats;
 
-    public ChatManager chatManager;
     public MultiUserChatManager mucManager;
     public Roster roster;
     public OpenfireConfiguration config;
@@ -127,6 +127,8 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
     private OfferListener offerListener;
     private Map<String, Offer> offerMap = new HashMap<String, Offer>();
 
+    private StanzaListener stanzaListener;
+    private ChatManager chatManager;
 
     // -------------------------------------------------------
     //
@@ -136,6 +138,8 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
 
     static {
         ProviderManager.addIQProvider("slot", UploadRequest.NAMESPACE, new UploadRequest.Provider());
+        ProviderManager.addExtensionProvider(SessionID.ELEMENT_NAME, SessionID.NAMESPACE, new SessionID.Provider());
+        ProviderManager.addExtensionProvider(QueueUpdate.ELEMENT_NAME, QueueUpdate.NAMESPACE, new QueueUpdate.Provider());
     }
 
     public static OpenfireConnection createConnection(String username, String password)
@@ -163,13 +167,31 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
                 connection = new OpenfireConnection(config);
                 connection.connect();
                 connection.login();
-                connection.addPacketListener(connection, new PacketTypeFilter(Message.class));
+
+                final OpenfireConnection conn = connection;
+
+                connection.stanzaListener = new StanzaListener()
+                {
+                    public void processStanza(Stanza packet) {
+                        //conn.processMessageStanza(packet);
+                    }
+                };
+
+                connection.addAsyncStanzaListener(connection.stanzaListener, new PacketTypeFilter(Message.class));
                 connections.put(connection.getStreamId(), connection);
 
                 users.put(username, connection);
 
                 connection.chatManager = ChatManager.getInstanceFor(connection);
-                connection.chatManager.addChatListener(connection);
+
+                connection.chatManager.addIncomingListener(new IncomingChatMessageListener()
+                {
+                  @Override public void newIncomingMessage(EntityBareJid from, Message message, Chat chat)
+                  {
+                        conn.chatCreated(from, message, chat);
+                  }
+                });
+
                 connection.chats = new ConcurrentHashMap<String, Chat>();
 
                 connection.mucManager = MultiUserChatManager.getInstanceFor(connection);
@@ -216,7 +238,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
             }
 
             users.remove(connection.getUsername());
-            connection.removePacketListener(connection);
+            connection.removeAsyncStanzaListener(connection.stanzaListener);
             connection.disconnect(new Presence(Presence.Type.unavailable));
         }
 
@@ -313,7 +335,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
         smackConnection = new SmackConnection(streamId, this);
 
         if (reconnect) {
-            notifyReconnection();
+            //notifyReconnection();
         }
 
         clientServlet = new ClientServlet(config.getUsername() + "");
@@ -410,7 +432,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
 
     private void sendPacket(TopLevelStreamElement stanza)
     {
-        sendPacket(stanza.toXML().toString());
+        sendPacket(stanza.toXML(StreamOpen.CLIENT_NAMESPACE).toString());
         firePacketSendingListeners((Stanza) stanza);
     }
 
@@ -490,40 +512,15 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
         }
     }
 
-    @Override
-    public void chatCreated(final Chat chat, final boolean createdLocally)
+    private void chatCreated(EntityBareJid from, Message message, Chat chat)
     {
-        String participant = chat.getParticipant().toString();
+        String participant = from.toString();
 
         Log.debug("Chat created: " + participant);
 
         if (chats.containsKey(participant) == false)
         {
             chats.put(participant, chat);
-        }
-
-        chat.addMessageListener(this);
-    }
-
-    @Override
-    public void processMessage(Chat chat, Message message)
-    {
-        Log.debug("Received chat message: " + message.getBody());
-
-        if (message.getType() == Message.Type.chat)
-        {
-            if (message.getBody() != null)
-            {
-                clientServlet.broadcast("chatapi.chat", "{\"type\": \"" + message.getType() + "\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\", \"body\": \"" + message.getBody() + "\"}");
-            } else {
-
-                ExtensionElement element = message.getExtension("http://jabber.org/protocol/chatstates");
-
-                if (element != null)
-                {
-                    clientServlet.broadcast("chatapi.chat", "{\"type\": \"" + message.getType() + "\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\", \"state\": \"" + element.getElementName() + "\"}");
-                }
-            }
         }
     }
 
@@ -534,7 +531,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
             Chat chat = chats.get(to);
 
             if (chat == null) {
-                chat = chatManager.createChat(JidCreate.entityBareFrom(to), null);
+                chat = chatManager.chatWith(JidCreate.entityBareFrom(to));
                 chats.put(to, chat);
             }
 
@@ -561,11 +558,11 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
             Chat chat = chats.get(to);
 
             if (chat == null) {
-                chat = chatManager.createChat(JidCreate.entityBareFrom(to), null);
+                chat = chatManager.chatWith(JidCreate.entityBareFrom(to));
                 chats.put(to, chat);
             }
 
-            chat.sendMessage(message);
+            chat.send(message);
             return true;
 
         } catch (Exception e) {
@@ -574,45 +571,74 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
         }
     }
 
-    // -------------------------------------------------------
-    //
-    // StanzaListener
-    //
-    // -------------------------------------------------------
-
-    public void processStanza(Stanza packet)
+    public void processMessageStanza(Stanza packet)
     {
-        Log.debug("Received packet: \n" + packet.toXML());
+        Log.debug("Received packet: \n" + packet.toXML(StreamOpen.CLIENT_NAMESPACE));
 
-        Message message = (Message) packet;
+        try {
+            Presence presence = (Presence) packet;
 
-        if (message.getType() == Message.Type.groupchat)
-        {
-            clientServlet.broadcast("chatapi.muc", "{\"type\": \"" + message.getType() + "\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\", \"body\": \"" + message.getBody() + "\"}");
-
-            if (autoStarted)
+            if (presence != null)
             {
-                MeetController.getInstance().postWebPush(getUsername(), "{\"title\":\"" + message.getFrom() + "\", \"message\": \"" + message.getBody() + "\"}");
+                clientServlet.broadcast("chatapi.presence", "{\"type\": \"presence\", \"to\":\"" + presence.getTo() + "\", \"from\":\"" + presence.getFrom() + "\", \"status\":\"" + presence.getStatus() + "\", \"show\": \"" + presence.getMode() + "\"}");
+                return;
             }
-        }
-        else {
+        } catch (Exception e) {}
 
-            GroupChatInvitation invitation = (GroupChatInvitation)packet.getExtension(GroupChatInvitation.ELEMENT, GroupChatInvitation.NAMESPACE);
+        try {
+            Message message = (Message) packet;
 
-            if (invitation != null)
+            if (message != null)
             {
-                try {
-                    String room = invitation.getRoomAddress();
-                    String url = JiveGlobals.getProperty("ofmeet.root.url.secure", "https://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + JiveGlobals.getProperty("httpbind.port.secure", "7443")) + "/meet/" + room.split("@")[0];
-                    clientServlet.broadcast("chatapi.muc", "{\"type\": \"invitationReceived\", \"room\":\"" + room + "\", \"inviter\":\"" + message.getFrom() + "\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\", \"url\":\"" + url + "\", \"reason\": \"" + message.getBody() + "\"}");
+                ExtensionElement element = message.getExtension("http://jabber.org/protocol/chatstates");
 
-                } catch (Exception e) {
-                    Log.error("invitationReceived", e);
+                if (element != null)
+                {
+                    clientServlet.broadcast("chatapi.chat", "{\"type\": \"" + message.getType() + "\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\", \"state\": \"" + element.getElementName() + "\"}");
                 }
+
+                if (message.getType() == Message.Type.groupchat)
+                {
+                    if (message.getBody() != null) clientServlet.broadcast("chatapi.muc", "{\"type\": \"" + message.getType() + "\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\", \"body\": \"" + message.getBody() + "\"}");
+
+                    if (autoStarted)
+                    {
+                        MeetController.getInstance().postWebPush(getUsername(), "{\"title\":\"" + message.getFrom() + "\", \"message\": \"" + message.getBody() + "\"}");
+                    }
+                }
+                else {
+
+                    if (message.getBody() != null)
+                    {
+                        clientServlet.broadcast("chatapi.chat", "{\"type\": \"" + message.getType() + "\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\", \"body\": \"" + message.getBody() + "\"}");
+
+                    } else {
+
+                        GroupChatInvitation invitation = (GroupChatInvitation)packet.getExtension(GroupChatInvitation.ELEMENT, GroupChatInvitation.NAMESPACE);
+
+                        if (invitation != null)
+                        {
+                            try {
+                                String room = invitation.getRoomAddress();
+                                String url = JiveGlobals.getProperty("ofmeet.root.url.secure", "https://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + JiveGlobals.getProperty("httpbind.port.secure", "7443")) + "/meet/" + room.split("@")[0];
+                                clientServlet.broadcast("chatapi.muc", "{\"type\": \"invitationReceived\", \"room\":\"" + room + "\", \"inviter\":\"" + message.getFrom() + "\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\", \"url\":\"" + url + "\", \"reason\": \"" + message.getBody() + "\"}");
+
+                            } catch (Exception e) {
+                                Log.error("invitationReceived", e);
+                            }
+                        }
+                    }
+                }
+                return;
             }
-        }
+        } catch (Exception e) {}
     }
 
+    // -------------------------------------------------------
+    //
+    // RosterListener
+    //
+    // -------------------------------------------------------
 
     @Override
     public void entriesAdded(Collection<Jid> addresses) {}
@@ -624,10 +650,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
     public void entriesUpdated(Collection<Jid> addresses) {}
 
     @Override
-    public void presenceChanged(Presence presence)
-    {
-        clientServlet.broadcast("chatapi.presence", "{\"type\": \"presence\", \"to\":\"" + presence.getTo() + "\", \"from\":\"" + presence.getFrom() + "\", \"status\":\"" + presence.getStatus() + "\", \"show\": \"" + presence.getMode() + "\"}");
-    }
+    public void presenceChanged(Presence presence) {}
 
     // -------------------------------------------------------
     //
@@ -928,7 +951,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
             request.setTo("httpfileupload." + XMPPServer.getInstance().getServerInfo().getXMPPDomain());
             request.setType(IQ.Type.get);
 
-            OpenfireConnection uploadConnection = getXMPPConnection(userId);
+            OpenfireConnection uploadConnection = getXMPPConnection(userId, null);
 
             if (uploadConnection != null)
             {
@@ -950,7 +973,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
 
                    if (errorMsg == null)
                    {
-                        if (result.getError().getCondition() == XMPPError.Condition.not_acceptable)
+                        if (result.getError().getCondition() == StanzaError.Condition.not_acceptable)
                         {
                             errorMsg = "File too large.";
                         }
@@ -1032,7 +1055,8 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
 
         if (assistance != null)
         {
-            OpenfireConnection assistConnection = getXMPPConnection(userid);
+            String workgroupName = assistance.getWorkgroup() + "@workgroup." + XMPPServer.getInstance().getServerInfo().getXMPPDomain();
+            OpenfireConnection assistConnection = getXMPPConnection(userid, workgroupName);
 
             if (assistConnection != null) {
                 try {
@@ -1099,7 +1123,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
         String userid = assistance.getUserID();
         String workgroupName = assistance.getWorkgroup() + "@workgroup." + XMPPServer.getInstance().getServerInfo().getXMPPDomain();
 
-        OpenfireConnection assistConnection = getXMPPConnection(userid);
+        OpenfireConnection assistConnection = getXMPPConnection(userid, workgroupName);
 
         if (assistConnection != null) {
             Workgroup workgroup = getWorkgroup(assistance, assistConnection);
@@ -1156,7 +1180,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
         }
     }
 
-    private static OpenfireConnection getXMPPConnection(final String userid) {
+    private static OpenfireConnection getXMPPConnection(final String userid, final String workgroupName) {
         if (assistConnections.containsKey(userid) == false) {
             try {
                 OpenfireConfiguration config = OpenfireConfiguration.builder()
@@ -1169,12 +1193,13 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
 
                 final OpenfireConnection connection = new OpenfireConnection(config);
                 connection.connect();
+                connection.mucManager = MultiUserChatManager.getInstanceFor(connection);
 
-                connection.addPacketListener(new PacketListener() {
+                connection.addAsyncStanzaListener(new StanzaListener() {
                     public void processStanza(Stanza packet) {
                         Message message = (Message) packet;
 
-                        if (message.getType() == Message.Type.groupchat) {
+                        if (message.getType() == Message.Type.groupchat && message.getBody() != null) {
                             Log.debug("Ask grpupchat message: " + message.getFrom() + "\n" + message.getBody());
                             connection.clientServlet.broadcast("chatapi.ask", "{\"type\": \"" + message.getType() + "\", \"to\":\"" + message.getTo()
                                             + "\", \"from\":\"" + message.getFrom() + "\", \"body\": \""
@@ -1183,6 +1208,20 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
                     }
 
                 }, new PacketTypeFilter(Message.class));
+
+                if (workgroupName != null)
+                {
+                    StanzaFilter presenceFilter = new StanzaTypeFilter(Presence.class);
+                    StanzaFilter fromFilter = FromMatchesFilter.create(JidCreate.entityBareFrom(workgroupName));
+                    StanzaFilter andFilter = new AndFilter(fromFilter, presenceFilter);
+
+                    connection.addAsyncStanzaListener(new StanzaListener() {
+                        public void processStanza(Stanza packet) {
+                            Presence presence = (Presence) packet;
+                            workgroupPresence.put(workgroupName, presence);
+                        }
+                    }, andFilter);
+                }
 
                 connection.login();
                 assistConnections.put(userid, connection);
@@ -1231,7 +1270,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
                                 assist.setChatroom(assistRoom);
 
                             } catch (Exception e) {
-                                Log.warn("invitationReceived - " + e);
+                                Log.error("invitationReceived ", e);
                             }
                             assist.setMessage(workgroupInvitation.getMessageBody());
                             assist.setSender(workgroupInvitation.getInvitationSender().toString());
@@ -1263,21 +1302,9 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
 
             if (presence == null) {
                 Workgroup workgroup = getWorkgroup(assistance, assistConnection);
-                boolean isAvailable = workgroup.isAvailable();
+                boolean isAvailable = true; //workgroup.isAvailable();
                 presence = new Presence(isAvailable ? Presence.Type.available : Presence.Type.unavailable);
                 workgroupPresence.put(workgroupName, presence);
-
-                StanzaFilter presenceFilter = new StanzaTypeFilter(Presence.class);
-                StanzaFilter fromFilter = FromMatchesFilter.create(JidCreate.entityBareFrom(workgroupName));
-                StanzaFilter andFilter = new AndFilter(fromFilter, presenceFilter);
-
-                assistConnection.addPacketListener(new PacketListener() {
-                    public void processStanza(Stanza packet) {
-                        Presence presence = (Presence) packet;
-                        workgroupPresence.put(workgroupName, presence);
-                    }
-                }, andFilter);
-
                 return isAvailable;
             }
 
@@ -1317,7 +1344,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
         return config.getUsername().toString();
     }
 
-    public void handleParser(String xml)
+    public Stanza handleParser(String xml)
     {
         Stanza stanza = null;
 
@@ -1325,12 +1352,22 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
             stanza = PacketParserUtils.parseStanza(xml);
         }
         catch (Exception e) {
-            Log.error("handleParser", e);
+
+            try {
+                XmlPullParser parser = PacketParserUtils.getParserFor(xml);
+                parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false);
+                stanza = PacketParserUtils.parseStanza(parser);
+            }
+            catch (Exception e1) {
+                //Log.error("handleParser failed");
+            }
         }
 
         if (stanza != null) {
             invokeStanzaCollectorsAndNotifyRecvListeners(stanza);
         }
+
+        return stanza;
     }
 
     // -------------------------------------------------------
@@ -1414,7 +1451,12 @@ public class OpenfireConnection extends AbstractXMPPConnection implements ChatMe
                 clientServlet.broadcast("chatapi.xmpp", "\"" + text + "\"");
             }
 
-            connection.handleParser(text);
+            Stanza stanza = connection.handleParser(text);
+
+            if (stanza != null)
+            {
+                processMessageStanza(stanza);
+            }
         }
 
         @Override

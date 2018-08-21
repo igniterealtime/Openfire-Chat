@@ -1434,37 +1434,37 @@
                         "type":"string",
                         "name":"end",
                         "in":"query",
-                        "required":true
+                        "required":false
                     },
                     {
                         "type":"string",
                         "name":"keywords",
                         "in":"query",
-                        "required":true
+                        "required":false
                     },
                     {
                         "type":"string",
                         "name":"room",
                         "in":"query",
-                        "required":true
+                        "required":false
                     },
                     {
                         "type":"string",
                         "name":"service",
                         "in":"query",
-                        "required":true
+                        "required":false
                     },
                     {
                         "type":"string",
                         "name":"start",
                         "in":"query",
-                        "required":true
+                        "required":false
                     },
                     {
                         "type":"string",
                         "name":"to",
                         "in":"query",
-                        "required":true
+                        "required":false
                     }
                 ],
                 "responses":{
@@ -1484,7 +1484,7 @@
                 "tags": [
                     "Chat"
                 ],
-                "summary": "Post a chat or groupchat message",
+                "summary": "Post a one-to-one chat message",
                 "description": "",             
                 "consumes":[
                 ],

@@ -751,47 +751,56 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     public void addServlet(ServletHolder holder, String path)
     {
-       context2.addServlet(holder, path);
+        try {
+            context2.addServlet(holder, path);
+        } catch (Exception e) {
+
+        }
     }
 
     public void removeServlets(ServletHolder deleteHolder)
     {
-       ServletHandler handler = context2.getServletHandler();
-       List<ServletHolder> servlets = new ArrayList<ServletHolder>();
-       Set<String> names = new HashSet<String>();
+       try {
+           ServletHandler handler = context2.getServletHandler();
+           List<ServletHolder> servlets = new ArrayList<ServletHolder>();
+           Set<String> names = new HashSet<String>();
 
-       for( ServletHolder holder : handler.getServlets() )
-       {
-           try {
-              if(deleteHolder.getName().equals(holder.getName()))
-              {
-                  names.add(holder.getName());
-              }
-              else /* We keep it */
-              {
+           for( ServletHolder holder : handler.getServlets() )
+           {
+               try {
+                  if(deleteHolder.getName().equals(holder.getName()))
+                  {
+                      names.add(holder.getName());
+                  }
+                  else /* We keep it */
+                  {
+                      servlets.add(holder);
+                  }
+              } catch (Exception e) {
                   servlets.add(holder);
               }
-          } catch (Exception e) {
-              servlets.add(holder);
-          }
-       }
+           }
 
-       List<ServletMapping> mappings = new ArrayList<ServletMapping>();
+           List<ServletMapping> mappings = new ArrayList<ServletMapping>();
 
-       for( ServletMapping mapping : handler.getServletMappings() )
-       {
-          /* Only keep the mappings that didn't point to one of the servlets we removed */
+           for( ServletMapping mapping : handler.getServletMappings() )
+           {
+              /* Only keep the mappings that didn't point to one of the servlets we removed */
 
-          if(!names.contains(mapping.getServletName()))
-          {
-              mappings.add(mapping);
-          }
-       }
+              if(!names.contains(mapping.getServletName()))
+              {
+                  mappings.add(mapping);
+              }
+           }
 
-       /* Set the new configuration for the mappings and the servlets */
+           /* Set the new configuration for the mappings and the servlets */
 
-       handler.setServletMappings( mappings.toArray(new ServletMapping[0]) );
-       handler.setServlets( servlets.toArray(new ServletHolder[0]) );
+           handler.setServletMappings( mappings.toArray(new ServletMapping[0]) );
+           handler.setServlets( servlets.toArray(new ServletHolder[0]) );
+
+        } catch (Exception e) {
+
+        }
     }
 
     private static final SecurityHandler basicAuth(String realm) {
