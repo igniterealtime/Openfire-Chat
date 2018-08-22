@@ -30,6 +30,7 @@ import org.codehaus.jackson.xc.*;
 
 import org.jivesoftware.openfire.XMPPServer;
 import org.jivesoftware.openfire.user.User;
+import org.jivesoftware.openfire.admin.AdminManager;
 import org.jivesoftware.util.*;
 
 import org.jivesoftware.openfire.plugin.rest.controller.UserServiceController;
@@ -225,28 +226,46 @@ public class ChatService {
     public String login(@PathParam("username") String username, @DefaultValue("") @QueryParam("totp") String totp, String password) throws ServiceException
     {
         Log.debug("login " + username + " " + totp);
+        if ("{}".equals(password.trim())) password = null;  // not sure why {} is returned in swagger
 
         try {
-            if (totp != null && !"".equals(totp))
+            OpenfireConnection connection = null;
+            boolean anonymous = true;
+            String loginUser = getLoginUser();
+
+            Log.debug("/{username}/login " + loginUser);
+
+            if (password == null || "".equals(password.trim()))
             {
-                User user = userService.getUser(username);
-                String base32Secret = user.getProperties().get("ofchat.totp.secret");
-
-                if (base32Secret != null)
+                if (loginUser != null  && AdminManager.getInstance().isUserAdmin(loginUser, true))
                 {
-                    String code = TimeBasedOneTimePasswordUtil.generateCurrentNumberString(base32Secret);
+                    anonymous = false;
+                }
 
-                    if (!totp.equals(code))
+            } else {
+                anonymous = false;
+
+                if (totp != null && !"".equals(totp.trim()))
+                {
+                    User user = userService.getUser(username);
+                    String base32Secret = user.getProperties().get("ofchat.totp.secret");
+
+                    if (base32Secret != null)
                     {
+                        String code = TimeBasedOneTimePasswordUtil.generateCurrentNumberString(base32Secret);
+
+                        if (!totp.equals(code))
+                        {
+                            throw new ServiceException("Exception", "two-factor authentication (2fa) failure", ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+                        }
+
+                    } else {
                         throw new ServiceException("Exception", "two-factor authentication (2fa) failure", ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
                     }
-
-                } else {
-                    throw new ServiceException("Exception", "two-factor authentication (2fa) failure", ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
                 }
             }
 
-            OpenfireConnection connection = OpenfireConnection.createConnection(username, password);
+            connection = OpenfireConnection.createConnection(username, password, anonymous);
 
             if (connection == null)
             {
@@ -397,7 +416,7 @@ public class ChatService {
     @GET
     @Path("/{streamid}/messages")
     @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
-    public Conversations getConversations(@PathParam("streamid") String streamid, @QueryParam("keywords") String keywords, @QueryParam("to") String to, @QueryParam("start") String start, @QueryParam("end") String end, @QueryParam("room") String room, @QueryParam("service") String service) throws ServiceException
+    public Conversations getConversations(@PathParam("streamid") String streamid, @QueryParam("keywords") String keywords, @QueryParam("to") String to, @QueryParam("start") String start, @QueryParam("end") String end, @QueryParam("room") String room, @DefaultValue("conference") @QueryParam("service") String service) throws ServiceException
     {
         Log.debug("getConversations " + streamid + " " + keywords + " " + " " + to  + " " + start + " " + end + " " + room + " " + service);
 
@@ -933,6 +952,27 @@ public class ChatService {
     //
     //-------------------------------------------------------
 
+    private String getLoginUser()
+    {
+        String username = null;
+        String token = httpRequest.getHeader("authorization");
+
+        Log.debug("getEndUser " + token);
+
+        if (token != null)
+        {
+            try {
+                String[] usernameAndPassword = null;
+                usernameAndPassword = BasicAuth.decode(token);
+
+                if (usernameAndPassword != null && usernameAndPassword.length == 2)
+                {
+                    username = usernameAndPassword[0];
+                }
+            } catch (Exception e) {}
+        }
+        return username;
+    }
 
     private JID makeJid(String participant1)
     {

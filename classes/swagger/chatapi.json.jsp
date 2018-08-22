@@ -1943,7 +1943,7 @@
                     {
                         "name":"body",
                         "in":"body",
-                        "required":true,
+                        "required":false,
                         "schema":{
                             "type":"string"
                         }

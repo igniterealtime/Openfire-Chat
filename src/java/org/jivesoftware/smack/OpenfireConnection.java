@@ -130,6 +130,8 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
     private StanzaListener stanzaListener;
     private ChatManager chatManager;
 
+    public boolean anonymous = false;
+
     // -------------------------------------------------------
     //
     // Statics
@@ -142,10 +144,14 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
         ProviderManager.addExtensionProvider(QueueUpdate.ELEMENT_NAME, QueueUpdate.NAMESPACE, new QueueUpdate.Provider());
     }
 
-    public static OpenfireConnection createConnection(String username, String password)
+    public static OpenfireConnection createConnection(String username, String password, boolean anonymous)
     {
         try {
-            AuthFactory.authenticate( username, password );
+
+            if (!anonymous && username != null && password != null && !"".equals(username.trim()) && !"".equals(password.trim()))
+            {
+                AuthFactory.authenticate( username, password );
+            }
 
         } catch ( Exception e ) {
             return null;
@@ -159,12 +165,13 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
                 OpenfireConfiguration config = OpenfireConfiguration.builder()
                   .setUsernameAndPassword(username, password)
                   .setXmppDomain(XMPPServer.getInstance().getServerInfo().getXMPPDomain())
-                  .setResource("ofchat" + new Random(new Date().getTime()).nextInt())
+                  .setResource(username + (new Random(new Date().getTime()).nextInt()))
                   .setHost(XMPPServer.getInstance().getServerInfo().getHostname())
                   .setPort(0)
                   .build();
 
                 connection = new OpenfireConnection(config);
+                connection.anonymous = anonymous;
                 connection.connect();
                 connection.login();
 
@@ -394,7 +401,9 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
             if (username == null || password == null || "".equals(username) || "".equals(password))
             {
-                authToken = new AuthToken(resource.toString(), true);
+                String user = resource.toString();
+                if (username != null && !"".equals(username)) user = username;
+                authToken = new AuthToken(user, anonymous);
 
             } else {
                 username = username.toLowerCase().trim();
@@ -1192,7 +1201,9 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
                   .build();
 
                 final OpenfireConnection connection = new OpenfireConnection(config);
+                connection.anonymous = true;
                 connection.connect();
+
                 connection.mucManager = MultiUserChatManager.getInstanceFor(connection);
 
                 connection.addAsyncStanzaListener(new StanzaListener() {

@@ -381,9 +381,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
                     String username = user.getUsername();
 
                     try {
-                       String password = AuthFactory.getPassword(username);
-
-                        OpenfireConnection connection = OpenfireConnection.createConnection(username, password);
+                        OpenfireConnection connection = OpenfireConnection.createConnection(username, null, false);
 
                         if (connection != null)
                         {
