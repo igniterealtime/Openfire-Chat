@@ -1485,7 +1485,7 @@
                     "Chat"
                 ],
                 "summary": "Post a one-to-one chat message",
-                "description": "",             
+                "description": "The message body can be plain text or json. When json, ensure there is a property called 'body'",             
                 "consumes":[
                 ],
                 "produces":[
@@ -1671,7 +1671,7 @@
                     "Chat"
                 ],  
                 "summary": "Post a message to a groupchat/muc room",
-                "description": "",               
+                "description": "The message body can be plain text or json. When json, ensure there is a property called 'body'",                         
                 "consumes":[
                 ],
                 "produces":[

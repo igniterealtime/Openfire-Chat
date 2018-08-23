@@ -101,6 +101,11 @@ var realtime = (function(rt)
                 try {
                     data = JSON.parse(message.body);
 
+                    if (data.payload.xmpp)
+                    {
+                        data.payload.xmpp = atob(data.payload.xmpp);
+                    }
+
                     console.log("JSON Object", data);
 
                 } catch (e) {

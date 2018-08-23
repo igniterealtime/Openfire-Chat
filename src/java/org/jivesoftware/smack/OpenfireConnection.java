@@ -21,6 +21,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
+import javax.xml.bind.DatatypeConverter;
 
 import javax.net.ssl.*;
 import javax.security.auth.callback.*;
@@ -49,6 +50,7 @@ import org.jivesoftware.smackx.workgroup.*;
 import org.jivesoftware.smackx.workgroup.user.*;
 import org.jivesoftware.smackx.workgroup.agent.*;
 import org.jivesoftware.smackx.workgroup.packet.*;
+import org.jivesoftware.smackx.jiveproperties.JivePropertiesManager;
 
 import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.JidCreate;
@@ -142,6 +144,8 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
         ProviderManager.addIQProvider("slot", UploadRequest.NAMESPACE, new UploadRequest.Provider());
         ProviderManager.addExtensionProvider(SessionID.ELEMENT_NAME, SessionID.NAMESPACE, new SessionID.Provider());
         ProviderManager.addExtensionProvider(QueueUpdate.ELEMENT_NAME, QueueUpdate.NAMESPACE, new QueueUpdate.Provider());
+
+        JivePropertiesManager.setJavaObjectEnabled(false);
     }
 
     public static OpenfireConnection createConnection(String username, String password, boolean anonymous)
@@ -571,6 +575,20 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
                 chats.put(to, chat);
             }
 
+            try {
+                JSONObject jsonBody = new JSONObject(message);
+
+                if (jsonBody.has("body"))
+                {
+                    Message newMessage = new Message();
+                    newMessage.setType(Message.Type.chat);
+                    newMessage.setBody(jsonBody.getString("body"));
+                    JivePropertiesManager.addProperty(newMessage, "data", message);
+                    chat.send(newMessage);
+                    return true;
+                }
+            } catch (Exception e1) { }
+
             chat.send(message);
             return true;
 
@@ -608,7 +626,11 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
                 if (message.getType() == Message.Type.groupchat)
                 {
-                    if (message.getBody() != null) clientServlet.broadcast("chatapi.muc", "{\"type\": \"" + message.getType() + "\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\", \"body\": \"" + message.getBody() + "\"}");
+                    if (message.getBody() != null)
+                    {
+                        String data = (String) JivePropertiesManager.getProperty(message, "data");
+                        clientServlet.broadcast("chatapi.muc", "{\"type\": \"" + message.getType() + "\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\", \"data\":" + data + ", \"body\": \"" + message.getBody() + "\"}");
+                    }
 
                     if (autoStarted)
                     {
@@ -619,7 +641,8 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
                     if (message.getBody() != null)
                     {
-                        clientServlet.broadcast("chatapi.chat", "{\"type\": \"" + message.getType() + "\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\", \"body\": \"" + message.getBody() + "\"}");
+                        String data = (String) JivePropertiesManager.getProperty(message, "data");
+                        clientServlet.broadcast("chatapi.chat", "{\"type\": \"" + message.getType() + "\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\", \"data\":" + data + ", \"body\": \"" + message.getBody() + "\"}");
 
                     } else {
 
@@ -731,6 +754,21 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
         Log.debug("sendRoomMessage " + mGroupChatName + "\n" + text);
 
         try {
+            if (text.startsWith("{") && text.endsWith("}"))
+            {
+                try {
+                    JSONObject jsonBody = new JSONObject(text);
+
+                    if (jsonBody.has("body"))
+                    {
+                        Message newMessage = new Message();
+                        newMessage.setBody(jsonBody.getString("body"));
+                        JivePropertiesManager.addProperty(newMessage, "data", text);
+                        groupchats.get(mGroupChatName).sendMessage(newMessage);
+                        return true;
+                    }
+                } catch (Exception e1) { }
+            }
             groupchats.get(mGroupChatName).sendMessage(text);
             return true;
 
@@ -1363,15 +1401,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
             stanza = PacketParserUtils.parseStanza(xml);
         }
         catch (Exception e) {
-
-            try {
-                XmlPullParser parser = PacketParserUtils.getParserFor(xml);
-                parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false);
-                stanza = PacketParserUtils.parseStanza(parser);
-            }
-            catch (Exception e1) {
-                //Log.error("handleParser failed");
-            }
+                Log.error("handleParser failed");
         }
 
         if (stanza != null) {
@@ -1455,11 +1485,18 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
         public void deliverRawText(String text)
         {
+            int pos = text.indexOf("<message ");
+
+            if (pos > -1)
+            {
+                text = text.substring(0, pos + 9) + "xmlns=\"jabber:client\"" + text.substring(pos + 8);
+            }
+
             Log.debug("SmackConnection - deliverRawText\n" + text);
 
             if (clientServlet != null)
             {
-                clientServlet.broadcast("chatapi.xmpp", "\"" + text + "\"");
+                clientServlet.broadcast("chatapi.xmpp", "{\"xmpp\": \"" + DatatypeConverter.printBase64Binary(text.getBytes()) + "\"}");
             }
 
             Stanza stanza = connection.handleParser(text);

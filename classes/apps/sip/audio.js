@@ -110,8 +110,6 @@ var realtime = (function(rt)
                     try {
                         data = JSON.parse(message.body);
 
-                        console.log("JSON Object", data);
-
                         if (data.action == "join")
                         {
                             rt.join(data.muc, data.payload);
@@ -121,6 +119,13 @@ var realtime = (function(rt)
                         {
                             rt.leave(data.muc, data.payload);
                         }
+
+                        if (data.payload.xmpp)
+                        {
+                            data.payload.xmpp = atob(data.payload.xmpp);
+                        }
+
+                        console.log("JSON Object", data);
 
                     } catch (e) {
                         console.error(e);
