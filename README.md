@@ -2,16 +2,16 @@
 ## Chat API (Rest API + SSE)
 Representational state transfer (REST) has now become the standard for abstracting request/response type web services into an API. When it is combined with Server Sent Events (otherwise known as Event Source), the result is a fresh new way of proving two-way real-time communication between web clients and a server using synchronous requests/responses (IQ) with REST and asynchronous evening (Message, Presence) with SSE.
 
-The Rest API plugin by Redor is very powerful support tool for Openfire. It allows you to administer Openfire via a RESTful API. Most of the common functions we do from the Openfire admin console web application can now be automated and integrated into server-side Java plugins or client-side web applications with ease. 
+The [Rest API plugin by Redor](https://igniterealtime.org/projects/openfire/plugins/restapi/readme.html) is very powerful support tool for Openfire. It allows you to administer Openfire via a RESTful API. Most of the common functions we do from the Openfire admin console web application can now be automated and integrated into server-side Java plugins or client-side web applications with ease. 
 
 This plugin runs on the HTTP-BIND (7070/7443) port in contrast to the REST API plugin which runs on the admin (9090/9091) port. It authenticates Openfire user credentials. It supports the REST API plus Bookmarks and SIP Accounts as an admin user and enables a normal user to handle presence, chat, groupchat, meetings, contacts and users with just a handful of REST requests and SSE events.
 
 # How to use
 The chat api can be used server-side from a web application with a single master password/secret on most HTTP requests. This can also be used when there is a middleware proxy web-server between Openfire and the web client like nodejs. This is required when admin type requsts are made. Otherwise, the web client can use the credentials for the openfire user to perform excluse requests for that user only. For security, avoid exposing the master password/secret to the web client.
 
-Asynchronous push events from the server for handling chat, groupchat audio, video and telephone conversations can be received as SSE events or as JSON messages over a SIP connection if the openfire ofswitch plugin is enabled and the user has a SIP websocket connection opened.
+Asynchronous push events from the server for handling chat, groupchat audio, video and telephone conversations can be received as SSE events or as JSON messages over a SIP connection if the openfire ofswitch plugin is enabled and the user has a SIP websocket connection opened. See ofswitch plugin for more details.
 
-A fully functional swagger UI for the chat api can be found [on your openfire server at](http://your_server:9090/plugins/ofchat/swagger-ui-sandbox.jsp). It has the documentation of each chat api endpoint and can be used to test the endpoint request against your working openfire server.
+A fully functional swagger UI for the chat api can be found on your openfire server at http://your_server:9090/plugins/ofchat/swagger-ui-sandbox.jsp. It has the documentation of each chat api endpoint and can be used to test the endpoint request against your working openfire server.
 
 
 # REST Endpoint Summary
@@ -53,7 +53,7 @@ To logoff, use the logoff chat api endpoint
 POST /restapi/v1/chat/{streamid}/logoff
 ````
 ## How to send and receive one-to-one chat messages
-In order to send a message, the stream-id of the sender and the destination address of the recipient are needed. On ingiterealtime.org, the **destination** address of a username is username@ingiterealtime.org.
+In order to send a message, the stream-id of the sender and the destination address of the recipient are needed. If your domain is ingiterealtime.org, then the **destination** address of a username is username@ingiterealtime.org.
 To send a chat message, first format a json object that looks like this:
 ````
 {
@@ -64,29 +64,7 @@ Add any extra data needed to the json object and use the chat api messages endpo
 ````
 POST /restapi/v1/chat/{streamid}/messages/{destination}
 ````
-To receive a one-to-one chat message, ensure you have a SIP connection created on the web client and a handler coded to handle SIP messages that look like this. See [this example](https://ingiterealtime.org:7443/apps/sip/audio.html) for details on how to do this. It is the same as before.
-To get the SIP connection details for the web client, use the chat api admin sipaccounts endpoint
-````
-GET /restapi/v1/sipaccounts/username/{username}
-````
-It will return a json object that looks like this
-````
-{
-  "username": "visitor",
-  "sipUsername": "visitor",
-  "authUsername": "visitor",
-  "displayName": "Patient",
-  "password": "D0ntgu3ss#",
-  "server": "65.50.229.195",
-  "outboundproxy": "65.50.229.195",
-  "stunServer": null,
-  "stunPort": null,
-  "voiceMailNumber": "visitor",
-  "useStun": "false",
-  "enabled": "true",
-  "promptCredentials": "false",
-  "status": "Unregistered"
-}
+To receive a one-to-one chat message, ensure you have an SSE connection created on the web client and a handler coded to handle the expected JSON messages. See https://your_server:7443/apps/sse/index.html for an example on how to do this.
 ````
 With the handler in place, incoming message data will look like this
 ````
@@ -103,7 +81,7 @@ To broadcast a user presence to all following and followed users, use the chat A
 ````
 POST /restapi/v1/chat/{streamid}/presence?show=dnd&status=very%20busy
 ````
-Incoming presence events from followers and following will arrive on the SIP channel and will look like this
+Incoming presence events from followers and following will arrive on the SSE channel and will look like this
 ````
 {
     "from": :"expert@ingiterealtime.org/converse.js-124258854",
@@ -188,7 +166,7 @@ Experts join topic workgroup queues automatically during sign-in by the realtime
               +-----------+
 ````
 ### User and Expert Actions
-1. Code a handler to handle asynchronous events that are pushed over the SIP connection for both user and expert. 
+1. Code a handler to handle asynchronous events that are pushed over the SSE connection for both user and expert. 
 2. User can ask a question. First construct a JSON object for the request. It should contain at least the following parameters. Additional data can be added as needed.
 ````
     {
@@ -276,4 +254,3 @@ To receive chat messages listen for the this JSON message
 }
 ```` 
 Use the other chatroom REST endpoints to leave, add or invite other experts to the conversation.
-
