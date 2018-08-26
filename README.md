@@ -7,7 +7,7 @@ The [Rest API plugin by Redor](https://igniterealtime.org/projects/openfire/plug
 This plugin runs on the HTTP-BIND (7070/7443) port in contrast to the REST API plugin which runs on the admin (9090/9091) port. It authenticates Openfire user credentials. It supports the REST API plus Bookmarks and SIP Accounts as an admin user and enables a normal user to handle presence, chat, groupchat, meetings, contacts and users with just a handful of REST requests and SSE events.
 
 # How to use
-The chat api can be used server-side from a web application with a single master password/secret on most HTTP requests. This can also be used when there is a middleware proxy web-server between Openfire and the web client like nodejs. This is required when admin type requsts are made. Otherwise, the web client can use the credentials for the openfire user to perform excluse requests for that user only. For security, avoid exposing the master password/secret to the web client.
+The chat api can be used server-side from a web application with an openfire admin username/password on most HTTP requests. This is most useful when there is a middleware proxy web-server between Openfire and the web client like nodejs. This is also required when admin type requsts are made. Otherwise, the web client can use the credentials for the openfire user to perform excluse requests for that user only. For security, avoid exposing the master password/secret to the web client. Use basic HTTP authentication.
 
 Asynchronous push events from the server for handling chat, groupchat audio, video and telephone conversations can be received as SSE events or as JSON messages over a SIP connection if the openfire ofswitch plugin is enabled and the user has a SIP websocket connection opened. See ofswitch plugin for more details.
 
@@ -42,7 +42,7 @@ POST /chat/xmpp<br/>
 # User cases
 ## How to login and logoff
 In order to send and receive chat messages for a specific user using the realtime server, a stream needs to be created. 
-To login, use the login chat api endpoint with no payload. The password is not required.
+To login, use the login chat api endpoint with the user password as payload. If this done server-side with the admin user, no payload is needed as the user password is not required.
 ````
 POST /restapi/v1/chat/{username}/login
 ````
