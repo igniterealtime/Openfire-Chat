@@ -20,7 +20,9 @@ import javax.ws.rs.core.Response;
 import org.jivesoftware.openfire.plugin.rest.exceptions.ServiceException;
 import org.jivesoftware.openfire.plugin.rest.exceptions.ExceptionType;
 import org.jivesoftware.openfire.plugin.rest.entity.AssistEntity;
+import org.jivesoftware.openfire.plugin.rest.entity.WorkgroupEntity;
 import org.jivesoftware.openfire.plugin.rest.entity.AskQueue;
+import org.jivesoftware.openfire.plugin.rest.*;
 import org.jivesoftware.openfire.auth.AuthFactory;
 
 import org.jivesoftware.util.*;
@@ -73,6 +75,46 @@ public class AskService {
         }
 
         return assistance;
+    }
+
+    @PUT
+    @Path("/")
+    @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
+    public Response createWorgroup(WorkgroupEntity workgroup) throws ServiceException
+    {
+        try {
+            String response = RESTServicePlugin.getInstance().createWorkgroup(workgroup.getName(), workgroup.getDescription(), workgroup.getMembers().split(","));
+
+            if (response != null)
+            {
+                throw new ServiceException(response, response, ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+            }
+
+        } catch (Exception e) {
+            throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+        }
+
+        return Response.status(Response.Status.OK).build();
+    }
+
+    @DELETE
+    @Path("/{workgroup}")
+    @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
+    public Response deleteWorgroup(@PathParam("workgroup") String workgroup) throws ServiceException
+    {
+        try {
+            String response = RESTServicePlugin.getInstance().deleteWorkgroup(workgroup);
+
+            if (response != null)
+            {
+                throw new ServiceException(response, response, ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+            }
+
+        } catch (Exception e) {
+            throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+        }
+
+        return Response.status(Response.Status.OK).build();
     }
 
     @GET

@@ -144,6 +144,8 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
     public Cache<String, SipAccount> sipCache;
     public Cache<String, SipAccount> sipCache2;
 
+    private Map<String, IQ> addhocCommands = new ConcurrentHashMap<String, IQ>();
+
 
     /**
      * Gets the single instance of RESTServicePlugin.
@@ -417,7 +419,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         Log.info("Create recordings folder");
         checkRecordingsFolder();
 
-        if ( JiveGlobals.getBooleanProperty("ofchat.adhoc.commands.enabled", false) )
+        if ( JiveGlobals.getBooleanProperty("ofchat.adhoc.commands.enabled", true) )
         {
             Log.info("Create admin session for ad-hoc commands");
             adminConnection = new AdminConnection();
@@ -1188,6 +1190,73 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
     </iq>
 */
 
+    public String createWorkgroup(String workgroup, String description, String[] members)
+    {
+        if (adminConnection == null)
+        {
+            return "admin account unavailable";
+        }
+
+        String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
+        String id = workgroup + "-" + System.currentTimeMillis();
+        String response = null;
+
+        IQ iq = new IQ(IQ.Type.set);
+        iq.setFrom("admin@" + domain);
+        iq.setTo("workgroup." + domain);
+        iq.setID(id);
+
+        Element command = iq.setChildElement("command", "http://jabber.org/protocol/commands");
+        command.addAttribute("node", "http://jabber.org/protocol/admin#add-workgroup");
+
+        Element x = command.addElement("x", "jabber:x:data");
+        x.addAttribute("type", "submit");
+        x.addElement("field").addAttribute("var", "FORM_TYPE").addElement("value").setText("http://jabber.org/protocol/admin");
+        x.addElement("field").addAttribute("var", "name").addElement("value").setText(workgroup);
+
+        Element membersEl = x.addElement("field").addAttribute("var", "members");
+
+        for (int i=0; i<members.length; i++)
+        {
+            membersEl.addElement("value").setText(members[i].trim());
+        }
+
+        x.addElement("field").addAttribute("var", "description").addElement("value").setText(description);
+
+        addhocCommands.put(id, iq);
+        adminConnection.getRouter().route(iq);
+        return response;
+    }
+
+    public String deleteWorkgroup(String workgroup)
+    {
+        if (adminConnection == null)
+        {
+            return "admin account unavailable";
+        }
+
+        String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
+        String id = workgroup + "-" + System.currentTimeMillis();
+        String response = null;
+
+        IQ iq = new IQ(IQ.Type.set);
+        iq.setFrom("admin@" + domain);
+        iq.setTo("workgroup." + domain);
+        iq.setID(id);
+
+        Element command = iq.setChildElement("command", "http://jabber.org/protocol/commands");
+        command.addAttribute("node", "http://jabber.org/protocol/admin#delete-workgroup");
+
+        Element x = command.addElement("x", "jabber:x:data");
+        x.addAttribute("type", "submit");
+        x.addElement("field").addAttribute("var", "FORM_TYPE").addElement("value").setText("http://jabber.org/protocol/admin");
+        x.addElement("field").addAttribute("var", "workgroup").addElement("value").setText(workgroup + "@workgroup." + domain);
+
+        addhocCommands.put(id, iq);
+        adminConnection.getRouter().route(iq);
+        return response;
+    }
+
     public class AdminConnection extends VirtualConnection
     {
         private SessionPacketRouter router;
@@ -1249,6 +1318,32 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
         public void deliver(org.xmpp.packet.Packet packet) throws UnauthorizedException
         {
+            try {
+                IQ iq = (IQ) packet;
+
+                if (iq != null)
+                {
+                    Element iqCommand = iq.getChildElement();
+
+                    if (iqCommand != null)
+                    {
+                        String sessionid = iqCommand.attributeValue("sessionid");
+                        String id = iq.getID();
+
+                        if (sessionid != null && addhocCommands.containsKey(id))
+                        {
+                            IQ adhoc = addhocCommands.remove(id);
+                            adhoc.setID(id + "-" + sessionid);
+                            Element adhocCommand = adhoc.getChildElement();
+                            adhocCommand.addAttribute("sessionid", sessionid);
+                            adminConnection.getRouter().route(adhoc);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Log.error("deliver", e);
+            }
+
             deliverRawText(packet.toXML());
         }
 

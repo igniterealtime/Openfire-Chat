@@ -13,6 +13,9 @@ import org.jivesoftware.database.DbConnectionManager;
 import org.jivesoftware.openfire.plugin.rest.exceptions.ExceptionType;
 import org.jivesoftware.openfire.plugin.rest.exceptions.ServiceException;
 
+import org.jivesoftware.util.cache.Cache;
+import org.jivesoftware.util.cache.CacheFactory;
+
 /**
  * The Class PropertyDAO.
  */
@@ -35,11 +38,27 @@ public class PropertyDAO {
      * @throws ServiceException
      *             the service exception
      */
-    public static List<String> getUsernameByProperty(String propertyName, String propertyValue) throws ServiceException {
+    public static List<String> getUsernameByProperty(String propertyName, String propertyValue) throws ServiceException
+    {
         List<String> usernames = new ArrayList<String>();
+        Cache<String, List<String>> propCache = CacheFactory.createLocalCache("User Properties");
+
+        if (propertyValue != null)
+        {
+            usernames = propCache.get(propertyName + propertyValue);
+        } else {
+            usernames = propCache.get(propertyName);
+        }
+
+        if (usernames != null) {
+            return usernames;
+        }
+
+        usernames = new ArrayList<String>();
         Connection con = null;
         PreparedStatement pstmt = null;
         ResultSet rs = null;
+
         try {
             con = DbConnectionManager.getConnection();
             // Load property by key and value
@@ -61,6 +80,13 @@ public class PropertyDAO {
                     ExceptionType.PROPERTY_NOT_FOUND, Response.Status.NOT_FOUND, sqle);
         } finally {
             DbConnectionManager.closeConnection(rs, pstmt, con);
+        }
+
+        if (propertyValue != null)
+        {
+            propCache.put(propertyName + propertyValue, usernames);
+        } else {
+            propCache.put(propertyName, usernames);
         }
         return usernames;
     }

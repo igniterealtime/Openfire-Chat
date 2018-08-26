@@ -22,6 +22,7 @@ import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
 import javax.xml.bind.DatatypeConverter;
+import java.text.SimpleDateFormat;
 
 import javax.net.ssl.*;
 import javax.security.auth.callback.*;
@@ -45,6 +46,7 @@ import org.jivesoftware.smack.util.*;
 import org.jivesoftware.smackx.muc.*;
 import org.jivesoftware.smackx.muc.packet.*;
 import org.jivesoftware.smackx.chatstates.*;
+import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.*;
 import org.jivesoftware.smackx.workgroup.*;
 import org.jivesoftware.smackx.workgroup.user.*;
@@ -58,6 +60,10 @@ import org.jxmpp.jid.parts.Resourcepart;
 import org.jxmpp.stringprep.XmppStringprepException;
 
 import org.jivesoftware.openfire.*;
+import org.jivesoftware.openfire.user.User;
+import org.jivesoftware.openfire.user.UserAlreadyExistsException;
+import org.jivesoftware.openfire.user.UserManager;
+import org.jivesoftware.openfire.user.UserNotFoundException;
 import org.jivesoftware.openfire.session.LocalClientSession;
 import org.jivesoftware.openfire.net.VirtualConnection;
 import org.jivesoftware.openfire.auth.UnauthorizedException;
@@ -85,6 +91,8 @@ import org.eclipse.jetty.servlets.EventSourceServlet;
 
 import org.ifsoft.meet.MeetController;
 import org.jivesoftware.spark.plugin.fileupload.UploadRequest;
+import org.ifsoft.sms.Servlet;
+import org.jivesoftware.openfire.plugin.rest.dao.PropertyDAO;
 
 
 /**
@@ -108,6 +116,11 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
     private static final ConcurrentHashMap<String, Presence> workgroupPresence = new ConcurrentHashMap<String, Presence>();
     private static final ConcurrentHashMap<String, Workgroup> assistWorkgroups = new ConcurrentHashMap<String, Workgroup>();
     private static final ConcurrentHashMap<String, OpenfireConnection> assistConnections = new ConcurrentHashMap<String, OpenfireConnection>();
+
+    private static final String DATE_FORMAT = "yyyyMMdd'T'HH:mm:ss";
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
+    private static final String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
+    private static final String hostname = XMPPServer.getInstance().getServerInfo().getHostname();
 
     private boolean reconnect = false;
     private LocalClientSession session;
@@ -144,6 +157,8 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
         ProviderManager.addIQProvider("slot", UploadRequest.NAMESPACE, new UploadRequest.Provider());
         ProviderManager.addExtensionProvider(SessionID.ELEMENT_NAME, SessionID.NAMESPACE, new SessionID.Provider());
         ProviderManager.addExtensionProvider(QueueUpdate.ELEMENT_NAME, QueueUpdate.NAMESPACE, new QueueUpdate.Provider());
+        ProviderManager.addExtensionProvider(QueueOverview.ELEMENT_NAME, QueueOverview.NAMESPACE, new QueueOverview.Provider());
+        ProviderManager.addExtensionProvider(QueueDetails.ELEMENT_NAME, QueueDetails.NAMESPACE, new QueueDetails.Provider());
 
         JivePropertiesManager.setJavaObjectEnabled(false);
     }
@@ -168,9 +183,9 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
             try {
                 OpenfireConfiguration config = OpenfireConfiguration.builder()
                   .setUsernameAndPassword(username, password)
-                  .setXmppDomain(XMPPServer.getInstance().getServerInfo().getXMPPDomain())
+                  .setXmppDomain(domain)
                   .setResource(username + (new Random(new Date().getTime()).nextInt()))
-                  .setHost(XMPPServer.getInstance().getServerInfo().getHostname())
+                  .setHost(hostname)
                   .setPort(0)
                   .build();
 
@@ -318,6 +333,66 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
         return new RosterEntities(rosterEntities);
     }
 
+    public static void smsIncoming(JSONObject sms)
+    {
+        /*  nexmo sms messages
+
+            https://desktop-545pc5b:7443/apps/sms?to=12817649550&text=hello&msisdn=447555129550&type=text&keyword=HELLO
+
+            messageId: 0B00000006214E86
+            to: 12817649550
+            text: Helli
+            msisdn: 447555129550
+            type: text
+            keyword: HELLI
+            message-timestamp: 2018-08-24 13:09:53
+
+            network-code: 23415
+            price: 0.03330000
+            messageId: 0C000000DD800584
+            scts: 1808241943
+            to: 12817649550
+            err-code: 0
+            msisdn: 447555129550
+            message-timestamp: 2018-08-24 19:43:55
+            status: accepted
+
+            network-code: 23415
+            price: 0.03330000
+            messageId: 0C000000DD800584
+            scts: 1808241944
+            to: 12817649550
+            err-code: 0
+            msisdn: 447555129550
+            message-timestamp: 2018-08-24 19:44:00
+            status: delivered
+
+        */
+
+        if (sms.has("text") && sms.has("keyword") && sms.has("msisdn") && sms.has("to"))
+        {
+            try {
+                List<String> fromUsers = PropertyDAO.getUsernameByProperty("sms_in_number", sms.getString("msisdn"));
+                List<String> toUsers = PropertyDAO.getUsernameByProperty("sms_out_number", sms.getString("to"));
+
+                if (fromUsers.size() > 0 && toUsers.size() > 0)
+                {
+                    if (fromUsers.size() > 1 || toUsers.size() > 1) Log.warn("smsIncoming - multiple users with " + sms.getString("msisdn") + " or " + sms.getString("to"));
+
+                    UserManager userManager = XMPPServer.getInstance().getUserManager().getInstance();
+                    User fromUser = userManager.getUser(fromUsers.get(0));
+                    User toUser = userManager.getUser(toUsers.get(0));
+
+                    OpenfireConnection smsConnTo = createConnection(toUsers.get(0), null, false);
+                    OpenfireConnection smsConnFrom = createConnection(fromUsers.get(0), null, false);
+
+                    smsConnFrom.sendChatMessage(sms.getString("text"), toUsers.get(0) + "@" + domain);
+                }
+            } catch (Exception e) {
+                Log.error("smsIncoming", e);
+            }
+        }
+    }
 
     // -------------------------------------------------------
     //
@@ -548,20 +623,28 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
                 chats.put(to, chat);
             }
 
-            ChatStateManager chatStateManager = ChatStateManager.getInstance(this);
+            ChatState newState = null;
 
-            if ("composing".equals(state))  chatStateManager.setCurrentState(ChatState.composing, chat);
-            if ("paused".equals(state))     chatStateManager.setCurrentState(ChatState.paused, chat);
-            if ("active".equals(state))     chatStateManager.setCurrentState(ChatState.active, chat);
-            if ("inactive".equals(state))   chatStateManager.setCurrentState(ChatState.inactive, chat);
-            if ("gone".equals(state))       chatStateManager.setCurrentState(ChatState.gone, chat);
+            if ("composing".equals(state))  newState = ChatState.composing;
+            if ("paused".equals(state))     newState = ChatState.paused;
+            if ("active".equals(state))     newState = ChatState.active;
+            if ("inactive".equals(state))   newState = ChatState.inactive;
+            if ("gone".equals(state))       newState = ChatState.gone;
 
-            return true;
+            if (newState != null)
+            {
+                Message message = new Message();
+                ChatStateExtension extension = new ChatStateExtension(newState);
+                message.addExtension(extension);
+
+                chat.send(message);
+                return true;
+            }
 
         } catch (Exception e) {
             Log.error("setCurrentState", e);
-            return false;
         }
+        return false;
     }
 
     public boolean sendChatMessage(String message, String to) {
@@ -607,6 +690,33 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
             if (presence != null)
             {
+                ExtensionElement nq = presence.getExtension("notify-queue", "http://jabber.org/protocol/workgroup");
+
+                if (nq != null) {
+                    QueueOverview notifyQueue = (QueueOverview) nq;
+                    clientServlet.broadcast("chatapi.ask", "{\"type\": \"notify-queue\", \"to\":\"" + presence.getTo() + "\", \"from\":\"" + presence.getFrom() + "\", \"averageWaitTime\":\"" + notifyQueue.getAverageWaitTime() + "\", \"userCount\":\"" + notifyQueue.getUserCount() + "\", \"status\":\"" + notifyQueue.getStatus() + "\", \"oldestEntry\": \"" + dateFormat.format(notifyQueue.getOldestEntry()) + "\"}");
+                }
+
+                ExtensionElement nqd = presence.getExtension("notify-queue-details", "http://jabber.org/protocol/workgroup");
+
+                if (nqd != null) {
+                    QueueDetails notifyQueueDetails = (QueueDetails) nqd;
+                    Set<QueueUser> users = notifyQueueDetails.getUsers();
+
+                    synchronized (users)
+                    {
+                        for (Iterator<QueueUser> i = users.iterator(); i.hasNext(); )
+                        {
+                            QueueUser user = i.next();
+                            int position = user.getQueuePosition();
+                            int timeRemaining = user.getEstimatedRemainingTime();
+                            Date timestamp = user.getQueueJoinTimestamp();
+
+                            clientServlet.broadcast("chatapi.ask", "{\"type\": \"notify-queue-details\", \"to\":\"" + presence.getTo() + "\", \"from\":\"" + presence.getFrom() + "\", \"userid\":\"" + user.getUserID() + "\", \"postion\":\"" + position + "\", \"timeRemaining\":\"" + timeRemaining + "\", \"timestamp\": \"" + dateFormat.format(timestamp) + "\"}");
+                        }
+                    }
+                }
+
                 clientServlet.broadcast("chatapi.presence", "{\"type\": \"presence\", \"to\":\"" + presence.getTo() + "\", \"from\":\"" + presence.getFrom() + "\", \"status\":\"" + presence.getStatus() + "\", \"show\": \"" + presence.getMode() + "\"}");
                 return;
             }
@@ -617,7 +727,21 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
             if (message != null)
             {
+                ExtensionElement departQueue = message.getExtension("depart-queue", "http://jabber.org/protocol/workgroup");
+                ExtensionElement queueStatus = message.getExtension("queue-status", "http://jabber.org/protocol/workgroup");
                 ExtensionElement element = message.getExtension("http://jabber.org/protocol/chatstates");
+
+                if (departQueue != null) {
+                    clientServlet.broadcast("chatapi.ask", "{\"type\": \"depart-queue\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\"}");
+                }
+                else
+
+                if (queueStatus != null)
+                {
+                    QueueUpdate queueUpdate = (QueueUpdate) queueStatus;
+                    clientServlet.broadcast("chatapi.ask", "{\"type\": \"update-queue\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\", \"remaingTime\":\"" + queueUpdate.getRemaingTime() + "\", \"position\": \"" + queueUpdate.getPosition() + "\"}");
+                }
+                else
 
                 if (element != null)
                 {
@@ -644,6 +768,39 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
                         String data = (String) JivePropertiesManager.getProperty(message, "data");
                         clientServlet.broadcast("chatapi.chat", "{\"type\": \"" + message.getType() + "\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\", \"data\":" + data + ", \"body\": \"" + message.getBody() + "\"}");
 
+                        if (JiveGlobals.getBooleanProperty("ofchat.sms.enabled", false))
+                        {
+                            try {
+                                String from = message.getFrom().getLocalpartOrNull().toString();
+                                String to = message.getTo().getLocalpartOrNull().toString();
+
+                                UserManager userManager = XMPPServer.getInstance().getUserManager().getInstance();
+                                User fromUser = userManager.getUser(from);
+                                User toUser = userManager.getUser(to);
+
+                                String smsFrom = fromUser.getProperties().get("sms_out_number");
+                                String smsTo = toUser.getProperties().get("sms_in_number");
+                                String body = message.getBody();
+
+                                if (smsFrom != null && smsTo != null)
+                                {
+                                    try {
+                                        JSONObject jsonBody = new JSONObject(body);
+
+                                        if (jsonBody.has("body"))
+                                        {
+                                            body = jsonBody.getString("body");
+                                        }
+                                    } catch (Exception e1) {}
+
+                                    Servlet.smsOutgoing(smsTo, smsFrom, body);
+                                }
+
+                            } catch (Exception e) {
+                                Log.error("processMessageStanza", e);
+                            }
+                        }
+
                     } else {
 
                         GroupChatInvitation invitation = (GroupChatInvitation)packet.getExtension(GroupChatInvitation.ELEMENT, GroupChatInvitation.NAMESPACE);
@@ -652,7 +809,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
                         {
                             try {
                                 String room = invitation.getRoomAddress();
-                                String url = JiveGlobals.getProperty("ofmeet.root.url.secure", "https://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + JiveGlobals.getProperty("httpbind.port.secure", "7443")) + "/meet/" + room.split("@")[0];
+                                String url = JiveGlobals.getProperty("ofmeet.root.url.secure", "https://" + hostname + ":" + JiveGlobals.getProperty("httpbind.port.secure", "7443")) + "/meet/" + room.split("@")[0];
                                 clientServlet.broadcast("chatapi.muc", "{\"type\": \"invitationReceived\", \"room\":\"" + room + "\", \"inviter\":\"" + message.getFrom() + "\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\", \"url\":\"" + url + "\", \"reason\": \"" + message.getBody() + "\"}");
 
                             } catch (Exception e) {
@@ -695,7 +852,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
     {
         try {
             String room = multiUserChat.getRoom().toString();
-            String url = JiveGlobals.getProperty("ofmeet.root.url.secure", "https://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + JiveGlobals.getProperty("httpbind.port.secure", "7443")) + "/meet/" + room.split("@")[0];
+            String url = JiveGlobals.getProperty("ofmeet.root.url.secure", "https://" + hostname + ":" + JiveGlobals.getProperty("httpbind.port.secure", "7443")) + "/meet/" + room.split("@")[0];
             clientServlet.broadcast("chatapi.muc", "{\"type\": \"invitationReceived\", \"password\":\"" + password + "\", \"room\":\"" + room + "\", \"inviter\":\"" + inviter + "\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\", \"url\":\"" + url + "\", \"reason\": \"" + reason + "\"}");
 
         } catch (Exception e) {
@@ -995,7 +1152,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
         try {
             UploadRequest request = new UploadRequest(fileName, fileLength);
-            request.setTo("httpfileupload." + XMPPServer.getInstance().getServerInfo().getXMPPDomain());
+            request.setTo("httpfileupload." + domain);
             request.setType(IQ.Type.get);
 
             OpenfireConnection uploadConnection = getXMPPConnection(userId, null);
@@ -1102,7 +1259,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
         if (assistance != null)
         {
-            String workgroupName = assistance.getWorkgroup() + "@workgroup." + XMPPServer.getInstance().getServerInfo().getXMPPDomain();
+            String workgroupName = assistance.getWorkgroup() + "@workgroup." + domain;
             OpenfireConnection assistConnection = getXMPPConnection(userid, workgroupName);
 
             if (assistConnection != null) {
@@ -1168,7 +1325,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
         }
 
         String userid = assistance.getUserID();
-        String workgroupName = assistance.getWorkgroup() + "@workgroup." + XMPPServer.getInstance().getServerInfo().getXMPPDomain();
+        String workgroupName = assistance.getWorkgroup() + "@workgroup." + domain;
 
         OpenfireConnection assistConnection = getXMPPConnection(userid, workgroupName);
 
@@ -1232,9 +1389,9 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
             try {
                 OpenfireConfiguration config = OpenfireConfiguration.builder()
                   .setUsernameAndPassword(userid, null)
-                  .setXmppDomain(XMPPServer.getInstance().getServerInfo().getXMPPDomain())
+                  .setXmppDomain(domain)
                   .setResource(userid)
-                  .setHost(XMPPServer.getInstance().getServerInfo().getHostname())
+                  .setHost(hostname)
                   .setPort(0)
                   .build();
 
@@ -1286,7 +1443,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
     private static Workgroup getWorkgroup(AssistEntity assistance, final OpenfireConnection assistConnection) {
         String key = assistance.getWorkgroup() + "-" + assistance.getUserID();
-        String workgroupName = assistance.getWorkgroup() + "@workgroup." + XMPPServer.getInstance().getServerInfo().getXMPPDomain();
+        String workgroupName = assistance.getWorkgroup() + "@workgroup." + domain;
 
         Workgroup workgroup = (Workgroup) assistWorkgroups.get(key);
 
@@ -1309,7 +1466,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
                         if (assist != null) {
                             assist.setGroupchat(workgroupInvitation.getGroupChatName().toString());
                             String url = JiveGlobals.getProperty("ofmeet.root.url.secure",
-                                    "https://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":"
+                                    "https://" + hostname + ":"
                                             + JiveGlobals.getProperty("httpbind.port.secure", "7443"))
                                     + "/meet/" + room;
                             assist.setUrl(url);
@@ -1344,7 +1501,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
     private static boolean isOnline(AssistEntity assistance, OpenfireConnection assistConnection) {
         String key = assistance.getWorkgroup() + "-" + assistance.getUserID();
-        final String workgroupName = assistance.getWorkgroup() + "@workgroup." + XMPPServer.getInstance().getServerInfo().getXMPPDomain();
+        final String workgroupName = assistance.getWorkgroup() + "@workgroup." + domain;
 
         try {
             Presence presence = workgroupPresence.get(workgroupName);
@@ -1533,13 +1690,20 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
     {
         private ClientEventSource clientEventSource = null;
         private String username = null;
+        private User user = null;
         private String sipDomain = null;
         private String sipProfile = null;
         private SipAccount sipAccount = null;
 
         public ClientServlet(String username)
         {
+            UserManager userManager = XMPPServer.getInstance().getUserManager().getInstance();
             this.username = username;
+
+            try {
+                this.user = userManager.getUser(username);
+            } catch (Exception e) { }
+
             this.sipProfile = JiveGlobals.getProperty("freeswitch.sip.internal", "internal");
 
             boolean freeswitchEnabled = JiveGlobals.getBooleanProperty("freeswitch.enabled", false);
@@ -1576,6 +1740,11 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
                 String json = "{\"event\": \"" + name + "\", \"payload\": " + event + "}";
                 RESTServicePlugin.getInstance().sendAsyncFWCommand("chat sip|freeswitch|" + sipProfile + "/" + sipAccount.getSipUsername() + "@" + sipAccount.getServer() + "|" + json);
             }
+        }
+
+        public User getUser()
+        {
+            return user;
         }
 
         @Override

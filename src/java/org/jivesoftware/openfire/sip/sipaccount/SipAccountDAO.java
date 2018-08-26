@@ -52,7 +52,7 @@ public class SipAccountDAO {
 
     public static SipAccount getAccountByUser(String username) throws ServiceException
     {
-        //Log.info("getAccountByUser "  + username);
+        Log.debug("getAccountByUser "  + username);
 
         Cache<String, SipAccount> sipCache2 = CacheFactory.createLocalCache("SIP Account By Username");
         SipAccount sipAccount = sipCache2.get(username);
@@ -88,20 +88,20 @@ public class SipAccountDAO {
         } finally {
             DbConnectionManager.closeConnection(rs, psmt, con);
         }
-        //Log.info("getAccountByUser: using DB "  + username);
+        Log.debug("getAccountByUser: using DB "  + username);
         sipCache2.put(username, sipAccount);
         return sipAccount;
     }
 
     public static SipAccount getAccountByExtn(String exten) throws ServiceException
     {
-        //Log.info("getAccountByExtn "  + exten);
+        Log.debug("getAccountByExtn "  + exten);
 
         Cache<String, SipAccount> sipCache = CacheFactory.createLocalCache("SIP Account By Extension");
         SipAccount sipAccount = sipCache.get(exten);
 
         if (sipAccount != null) {
-            Log.info("getAccountByUser: using cache "  + exten);
+            Log.debug("getAccountByUser: using cache "  + exten);
             return sipAccount;
         }
         String sql = "SELECT username, sipusername, sipauthuser, sipdisplayname, sippassword, sipserver, enabled, "
@@ -131,7 +131,7 @@ public class SipAccountDAO {
         } finally {
             DbConnectionManager.closeConnection(rs, psmt, con);
         }
-        //Log.info("getAccountByUser: using DB "  + exten);
+        Log.debug("getAccountByUser: using DB "  + exten);
         sipCache.put(exten, sipAccount);
         return sipAccount;
     }

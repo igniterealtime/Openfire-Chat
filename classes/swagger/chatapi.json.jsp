@@ -220,7 +220,38 @@
                         }
                     }
                 }
-            }
+            },
+            "put":{
+                "tags": [
+                    "Ask"
+                ],             
+                "summary": "Create a workgroup",
+                "description": "Use this endpoint to create a fastpath workgroup, default group with memebers",                
+                "consumes":[
+                ],
+                "produces":[
+                ],
+                "parameters":[
+                    {
+                        "name":"body",
+                        "in":"body",
+                        "required":true,
+                        "schema":{
+                            "$ref":"#/definitions/WorkgroupEntity"
+                        }
+                    }
+                ],
+                "responses":{
+                    "200":{
+                        "description":"OK",
+                        "headers":{
+                        },
+                        "schema":{
+                            "$ref":"#/definitions/WorkgroupEntity"
+                        }
+                    }
+                }
+            }            
         },
         "/restapi/v1/ask/upload/{userId}/{fileName}/{fileSize}":{
             "get":{
@@ -339,11 +370,11 @@
         },        
         "/restapi/v1/ask/{userId}":{
             "get":{
-        "tags": [
-            "Ask"
-        ],              
-        "summary": "Query assitance request",
-        "description": "",            
+                "tags": [
+                    "Ask"
+                ],              
+                "summary": "Query assitance request",
+                "description": "",            
                 "consumes":[
                 ],
                 "produces":[
@@ -368,11 +399,11 @@
                 }
             },
             "put":{
-        "tags": [
-            "Ask"
-        ],              
-        "summary": "Post a message to an assistance chat",
-        "description": "",                
+                "tags": [
+                    "Ask"
+                ],              
+                "summary": "Post a message to an assistance chat",
+                "description": "",                
                 "consumes":[
                 ],
                 "produces":[
@@ -402,11 +433,11 @@
                 }
             },
             "post":{
-        "tags": [
-            "Ask"
-        ],              
-        "summary": "Join an assistance chat",
-        "description": "",               
+                "tags": [
+                    "Ask"
+                ],              
+                "summary": "Join an assistance chat",
+                "description": "",               
                 "consumes":[
                 ],
                 "produces":[
@@ -428,11 +459,11 @@
                 }
             },
             "delete":{
-        "tags": [
-            "Ask"
-        ],              
-        "summary": "Terminate an assistance",
-        "description": "",             
+                "tags": [
+                    "Ask"
+                ],              
+                "summary": "Terminate an assistance",
+                "description": "",             
                 "consumes":[
                 ],
                 "produces":[
@@ -454,13 +485,41 @@
                 }
             }
         },
+        "/restapi/v1/ask/{workgroup}":{        
+            "delete":{
+                "tags": [
+                    "Ask"
+                ],             
+                "summary": "Delete a workgroup",
+                "description": "Use this endpoint to delete a fastpath workgroup, default group with memebers",                
+                "consumes":[
+                ],
+                "produces":[
+                ],
+                "parameters":[
+                    {
+                        "type":"string",
+                        "name":"workgroup",
+                        "in":"path",
+                        "required":true
+                    }
+                ],
+                "responses":{
+                    "200":{
+                        "description":"OK",
+                        "headers":{
+                        }
+                    }
+                }
+            }   
+        },            
         "/restapi/v1/bookmarks":{
             "post":{
-        "tags": [
-            "Admin"
-        ],
-        "summary": "Endpoint to create a new bookmark",
-        "description": "",        
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Endpoint to create a new bookmark",
+                "description": "",        
                 "consumes":[
                 ],
                 "produces":[
@@ -1593,7 +1652,7 @@
                     "Chat"
                 ],  
                 "summary": "Broadcast own presence to others",
-                "description": "",              
+                "description": "show can be 'dnd', 'xa','away','available' while status is any text message",              
                 "consumes":[
                 ],
                 "produces":[
@@ -6118,6 +6177,19 @@
                 }
             }
         },
+        "WorkgroupEntity":{
+            "properties":{
+                "description":{
+                    "type":"string"
+                },
+                "members":{
+                    "type":"string"
+                },
+                "name":{
+                    "type":"string"
+                }
+            }
+        },        
         "WorkgroupEntities":{
             "properties":{
                 "workgroups":{
