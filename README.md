@@ -4,7 +4,9 @@ Representational state transfer (REST) has now become the standard for abstracti
 
 The [Rest API plugin by Redor](https://igniterealtime.org/projects/openfire/plugins/restapi/readme.html) is very powerful support tool for Openfire. It allows you to administer Openfire via a RESTful API. Most of the common functions we do from the Openfire admin console web application can now be automated and integrated into server-side Java plugins or client-side web applications with ease. 
 
-This plugin runs on the HTTP-BIND (7070/7443) port in contrast to the REST API plugin which runs on the admin (9090/9091) port. It authenticates Openfire user credentials. It supports the REST API plus Bookmarks and SIP Accounts as an admin user and enables a normal user to handle presence, chat, groupchat, meetings, contacts and users with just a handful of REST requests and SSE events.
+This plugin runs on the HTTP-BIND (7070/7443) port in contrast to the REST API plugin which runs on the admin (9090/9091) port. It authenticates Openfire user credentials. It supports all the admin endpoints from the REST API plugin plus additional admin endpoints for Fastpath Workgroups, Bookmarks and SIP Accounts as an admin user. As a regular user, there are chat endpoints to handle presence, chat, groupchat, meetings, contacts and users and SIP telephone calls. Asynchronous push events are delivered over web server sent events or over a SIP websocket connection.
+
+**Using both plugins at the same time may produce unexpected results**
 
 # How to use
 The chat api can be used server-side from a web application with an openfire admin username/password on most HTTP requests. This is most useful when there is a middleware proxy web-server between Openfire and the web client like nodejs. This is also required when admin type requsts are made. Otherwise, the web client can use the credentials for the openfire user to perform excluse requests for that user only. For security, avoid exposing the master password/secret to the web client. Use basic HTTP authentication.
