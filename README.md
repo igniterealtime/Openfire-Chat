@@ -65,7 +65,6 @@ Add any extra data needed to the json object and use the chat api messages endpo
 POST /restapi/v1/chat/{streamid}/messages/{destination}
 ````
 To receive a one-to-one chat message, ensure you have an SSE connection created on the web client and a handler coded to handle the expected JSON messages. See https://your_server:7443/apps/sse/index.html for an example on how to do this.
-````
 With the handler in place, incoming message data will look like this
 ````
 {
@@ -76,6 +75,7 @@ With the handler in place, incoming message data will look like this
    'data': {}
 }
 ````
+
 ## How to broadcast and receive presence messages
 To broadcast a user presence to all following and followed users, use the chat API presence endpoint.
 ````
@@ -91,6 +91,7 @@ Incoming presence events from followers and following will arrive on the SSE cha
     "type": "presence"
 }
 ````
+
 ## How to use fastpath with the chat api
 In order to use fastpath, an understanding of the roles and responsibilities of all participants is needed.
 
