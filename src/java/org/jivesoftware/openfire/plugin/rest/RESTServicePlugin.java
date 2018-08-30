@@ -49,6 +49,7 @@ import org.jivesoftware.openfire.event.*;
 import org.jivesoftware.openfire.group.*;
 import org.jivesoftware.openfire.muc.*;
 import org.jivesoftware.openfire.session.*;
+import org.jivesoftware.openfire.interceptor.*;
 import org.jivesoftware.openfire.*;
 
 import org.jivesoftware.openfire.plugin.rest.sasl.*;
@@ -60,6 +61,7 @@ import org.jivesoftware.openfire.plugin.rest.entity.SystemProperties;
 import org.jivesoftware.openfire.plugin.rest.entity.SystemProperty;
 import org.jivesoftware.openfire.plugin.rest.exceptions.ExceptionType;
 import org.jivesoftware.openfire.plugin.rest.exceptions.ServiceException;
+import org.jivesoftware.openfire.plugin.rest.dao.PropertyDAO;
 import org.jivesoftware.openfire.plugin.spark.*;
 
 import org.jivesoftware.util.cache.Cache;
@@ -92,6 +94,8 @@ import org.jivesoftware.smack.OpenfireConnection;
 import org.ifsoft.meet.*;
 import org.xmpp.packet.*;
 import org.dom4j.Element;
+import net.sf.json.*;
+import org.ifsoft.sms.Servlet;
 
 import org.traderlynk.blast.MessageBlastService;
 import org.jivesoftware.openfire.sip.sipaccount.SipAccount;
@@ -99,13 +103,15 @@ import org.jivesoftware.openfire.sip.sipaccount.SipAccount;
 /**
  * The Class RESTServicePlugin.
  */
-public class RESTServicePlugin implements Plugin, SessionEventListener, PropertyEventListener {
+public class RESTServicePlugin implements Plugin, SessionEventListener, PropertyEventListener, PacketInterceptor {
     private static final Logger Log = LoggerFactory.getLogger(RESTServicePlugin.class);
 
     /** The Constant INSTANCE. */
     public static RESTServicePlugin INSTANCE = null;
 
     private static final String CUSTOM_AUTH_FILTER_PROPERTY_NAME = "plugin.ofchat.customAuthFilter";
+    private static final UserManager userManager = XMPPServer.getInstance().getUserManager().getInstance();
+    private static final String DOMAIN = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
 
     /** The authentication secret. */
     private String secret;
@@ -118,6 +124,9 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     /** The enabled. */
     private boolean enabled;
+    private boolean smsEnabled;
+    private boolean adhocEnabled;
+    private boolean swaggerSecure;
 
     /** The http auth. */
     private String httpAuth;
@@ -189,6 +198,9 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
         // See if the service is enabled or not.
         enabled = JiveGlobals.getBooleanProperty("plugin.restapi.enabled", false);
+        smsEnabled = JiveGlobals.getBooleanProperty("ofchat.sms.enabled", false);
+        adhocEnabled = JiveGlobals.getBooleanProperty("ofchat.adhoc.commands.enabled", false);
+        swaggerSecure = JiveGlobals.getBooleanProperty("ofchat.swagger.secure", false);
 
         // See if the HTTP Basic Auth is enabled or not.
         httpAuth = JiveGlobals.getProperty("plugin.restapi.httpAuth", "basic");
@@ -419,7 +431,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         Log.info("Create recordings folder");
         checkRecordingsFolder();
 
-        if ( JiveGlobals.getBooleanProperty("ofchat.adhoc.commands.enabled", true) )
+        if ( adhocEnabled )
         {
             Log.info("Create admin session for ad-hoc commands");
             adminConnection = new AdminConnection();
@@ -434,6 +446,12 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         sipCache2 = CacheFactory.createLocalCache("SIP Account By Username");
         sipCache2.setMaxCacheSize(-1);
         sipCache2.setMaxLifetime(3600 * 1000);
+
+        if ( smsEnabled )
+        {
+            Log.info("Setup SMS message interceptor");
+            InterceptorManager.getInstance().addInterceptor(this);
+        }
     }
 
     /* (non-Javadoc)
@@ -443,7 +461,6 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
         if (adminConnection != null) adminConnection.close();
 
-        // Stop listening to system property events
         PropertyEventDispatcher.removeListener(this);
 
         if ( bookmarkInterceptor != null )
@@ -476,6 +493,8 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
             //unloadSolo();
         } catch (Exception e) {}
+
+        InterceptorManager.getInstance().removeInterceptor(this);
     }
 
     /**
@@ -676,6 +695,34 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         JiveGlobals.setProperty("plugin.restapi.enabled", enabled ? "true" : "false");
     }
 
+    public boolean isSmsEnabled() {
+        return smsEnabled;
+    }
+
+    public void setSmsEnabled(boolean smsEnabled) {
+        this.smsEnabled = smsEnabled;
+        JiveGlobals.setProperty("ofchat.sms.enabled", smsEnabled ? "true" : "false");
+    }
+
+    public void setAdhocEnabled(boolean adhocEnabled) {
+        this.adhocEnabled = adhocEnabled;
+        JiveGlobals.setProperty("ofchat.adhoc.commands.enabled", adhocEnabled ? "true" : "false");
+    }
+
+    public boolean isAdhocEnabled() {
+        return adhocEnabled;
+    }
+
+    public void setSwaggerSecure(boolean swaggerSecure) {
+        this.swaggerSecure = swaggerSecure;
+        JiveGlobals.setProperty("ofchat.swagger.secure", swaggerSecure ? "true" : "false");
+    }
+
+    public boolean isSwaggerSecure() {
+        return swaggerSecure;
+    }
+
+
     /**
      * Gets the http authentication mechanism.
      *
@@ -751,6 +798,8 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     public void addServlet(ServletHolder holder, String path)
     {
+        Log.info("addServlet " + holder.getName());
+
         try {
             context2.addServlet(holder, path);
         } catch (Exception e) {
@@ -760,6 +809,8 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     public void removeServlets(ServletHolder deleteHolder)
     {
+       Log.info("removeServlets " + deleteHolder.getName());
+
        try {
            ServletHandler handler = context2.getServletHandler();
            List<ServletHolder> servlets = new ArrayList<ServletHolder>();
@@ -928,9 +979,159 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         return lines;
     }
 
+
+    //-------------------------------------------------------
+    //
+    //  PacketInterceptor for SMS
+    //
+    //-------------------------------------------------------
+
+    public void interceptPacket(Packet packet, org.jivesoftware.openfire.session.Session session, boolean incoming, boolean processed) throws PacketRejectedException
+    {
+        // Ignore any packets that haven't already been processed by interceptors.
+
+        if (!processed) {
+            return;
+        }
+
+        if (packet instanceof Message)
+        {
+            if (!incoming) {
+                return;
+            }
+
+            Message message = (Message) packet;
+            final JID fromJID = message.getFrom();
+            final JID toJID = message.getTo();
+
+            if (message.getBody() != null && Message.Type.chat == message.getType())
+            {
+                if (fromJID.getNode() != null && toJID.getNode() != null)
+                {
+                    try {
+                        String from = fromJID.getNode().toString();
+                        String to = toJID.getNode().toString();
+
+                        User fromUser = null;
+
+                        try {fromUser = userManager.getUser(from);} catch (Exception e1) {}
+
+                        if (fromUser != null)
+                        {
+                            String smsFrom = fromUser.getProperties().get("sms_out_number");
+                            String smsTo = null;
+
+                            if (to.startsWith("sms-"))
+                            {
+                                smsTo = to.substring(4);
+
+                            } else {
+                                try {
+                                    User toUser = userManager.getUser(to);
+                                    smsTo = toUser.getProperties().get("sms_in_number");
+                                } catch (Exception e1) {}
+                            }
+
+                            if (smsTo != null && smsFrom != null)
+                            {
+                                String body = message.getBody();
+
+                                try {
+                                    JSONObject jsonBody = new JSONObject(body);
+
+                                    if (jsonBody.has("body"))
+                                    {
+                                        body = jsonBody.getString("body");
+                                    }
+                                } catch (Exception e1) {}
+
+                                Servlet.smsOutgoing(smsTo, smsFrom, body);
+                            }
+                        }
+
+                    } catch (Exception e) {
+                        Log.error("interceptPacket", e);
+                    }
+                }
+            }
+        }
+    }
+
+    public static void smsIncoming(JSONObject sms)
+    {
+        /*  nexmo sms messages
+
+            https://desktop-545pc5b:7443/apps/sms?to=12817649550&text=hello&msisdn=447555129550&type=text&keyword=HELLO
+
+            messageId: 0B00000006214E86
+            to: 12817649550
+            text: Helli
+            msisdn: 447555129550
+            type: text
+            keyword: HELLI
+            message-timestamp: 2018-08-24 13:09:53
+
+            network-code: 23415
+            price: 0.03330000
+            messageId: 0C000000DD800584
+            scts: 1808241943
+            to: 12817649550
+            err-code: 0
+            msisdn: 447555129550
+            message-timestamp: 2018-08-24 19:43:55
+            status: accepted
+
+            network-code: 23415
+            price: 0.03330000
+            messageId: 0C000000DD800584
+            scts: 1808241944
+            to: 12817649550
+            err-code: 0
+            msisdn: 447555129550
+            message-timestamp: 2018-08-24 19:44:00
+            status: delivered
+
+        */
+
+        if (sms.has("text") && sms.has("keyword") && sms.has("msisdn") && sms.has("to"))
+        {
+            try {
+                List<String> fromUsers = PropertyDAO.getUsernameByProperty("sms_in_number", sms.getString("msisdn"));
+                List<String> toUsers = PropertyDAO.getUsernameByProperty("sms_out_number", sms.getString("to"));
+
+                if (fromUsers.size() > 1 || toUsers.size() > 1) Log.warn("smsIncoming - multiple users with " + sms.getString("msisdn") + " or " + sms.getString("to"));
+
+                if (toUsers.size() > 0)
+                {
+                    String toJid = toUsers.get(0) + "@" + DOMAIN;
+                    String fromJid = null;
+
+                    if (fromUsers.size() > 0)
+                    {
+                        fromJid = fromUsers.get(0) + "@" + DOMAIN;
+                    } else {
+                        String fromSMS = "sms-" + sms.getString("msisdn");
+                        fromJid = fromSMS + "@" + DOMAIN;
+                        OpenfireConnection.createConnection(fromSMS, null, true);
+                    }
+
+                    Message message = new Message();
+                    message.setType(Message.Type.chat);
+                    message.setFrom(fromJid);
+                    message.setTo(toJid);
+                    message.setBody(sms.getString("text"));
+
+                    XMPPServer.getInstance().getMessageRouter().route(message);
+                }
+            } catch (Exception e) {
+                Log.error("smsIncoming", e);
+            }
+        }
+    }
+
     // -------------------------------------------------------
     //
-    //
+    //  SessionEventListener
     //
     // -------------------------------------------------------
 
@@ -1197,13 +1398,12 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             return "admin account unavailable";
         }
 
-        String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
         String id = workgroup + "-" + System.currentTimeMillis();
         String response = null;
 
         IQ iq = new IQ(IQ.Type.set);
-        iq.setFrom("admin@" + domain);
-        iq.setTo("workgroup." + domain);
+        iq.setFrom("admin@" + DOMAIN);
+        iq.setTo("workgroup." + DOMAIN);
         iq.setID(id);
 
         Element command = iq.setChildElement("command", "http://jabber.org/protocol/commands");
@@ -1235,13 +1435,12 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             return "admin account unavailable";
         }
 
-        String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
         String id = workgroup + "-" + System.currentTimeMillis();
         String response = null;
 
         IQ iq = new IQ(IQ.Type.set);
-        iq.setFrom("admin@" + domain);
-        iq.setTo("workgroup." + domain);
+        iq.setFrom("admin@" + DOMAIN);
+        iq.setTo("workgroup." + DOMAIN);
         iq.setID(id);
 
         Element command = iq.setChildElement("command", "http://jabber.org/protocol/commands");
@@ -1250,7 +1449,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         Element x = command.addElement("x", "jabber:x:data");
         x.addAttribute("type", "submit");
         x.addElement("field").addAttribute("var", "FORM_TYPE").addElement("value").setText("http://jabber.org/protocol/admin");
-        x.addElement("field").addAttribute("var", "workgroup").addElement("value").setText(workgroup + "@workgroup." + domain);
+        x.addElement("field").addAttribute("var", "workgroup").addElement("value").setText(workgroup + "@workgroup." + DOMAIN);
 
         addhocCommands.put(id, iq);
         adminConnection.getRouter().route(iq);
@@ -1341,7 +1540,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
                     }
                 }
             } catch (Exception e) {
-                Log.error("deliver", e);
+                //Log.error("deliver", e);
             }
 
             deliverRawText(packet.toXML());

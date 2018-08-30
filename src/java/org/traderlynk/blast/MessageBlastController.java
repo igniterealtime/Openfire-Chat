@@ -31,11 +31,14 @@ import nl.martijndwars.webpush.*;
 
 import net.sf.json.*;
 import org.ifsoft.meet.MeetController;
+import org.ifsoft.sms.Servlet;
 
 public class MessageBlastController {
 
     private static final Logger Log = LoggerFactory.getLogger(MessageBlastController.class);
+    private static final UserManager userManager = XMPPServer.getInstance().getUserManager().getInstance();
     public static final MessageBlastController INSTANCE = new MessageBlastController();
+
     public final Map<String, MessageBlastSentEntity> blastSents = new ConcurrentHashMap<String, MessageBlastSentEntity>();
     public final Map<String, BlastChat> blastChats = new ConcurrentHashMap<String, BlastChat>();
 
@@ -243,26 +246,60 @@ public class MessageBlastController {
         {
             sendMessage(fromUser, from, to, subject, replyTo, body, id);
 
+        } else if (to.startsWith("+")) { // SMS number
+
+            if (JiveGlobals.getBooleanProperty("ofchat.sms.enabled", false))
+            {
+                String smsFromUser = (replyTo == null || "".equals(replyTo)) ? from : replyTo;
+                User fromUsr = null;
+
+                try {fromUsr = userManager.getUser(smsFromUser);} catch (Exception e1) {}
+
+                if (fromUsr != null)
+                {
+                    String smsFrom = fromUsr.getProperties().get("sms_out_number");
+
+                    if (smsFrom != null)
+                    {
+                        Servlet.smsOutgoing(to.substring(1), smsFrom, body);    // remove +
+
+                        BlastChat blastChat = new BlastChat(fromUser, id, from, to, replyTo, subject, body);
+
+                        blastChat.setMessageRead("Message Sent");
+                        blastChat.setRecipientsCount();
+
+                        String key = fromUser + id + to;
+                        blastChats.put(key, blastChat);
+
+                        incrementRecieveCount(id, 1);
+                        checkpointState(id);
+                    }
+                }
+            }
+
         } else {
             Group group = GroupManager.getInstance().getGroup(to);
 
-            for (JID memberJID : group.getMembers())
+            if (group != null)
             {
-                sendMessage(fromUser, from, memberJID.toString(), subject, replyTo, body, id);
-            }
+                for (JID memberJID : group.getMembers())
+                {
+                    sendMessage(fromUser, from, memberJID.toString(), subject, replyTo, body, id);
+                }
 
-            for (JID memberJID : group.getAdmins())
-            {
-                sendMessage(fromUser, from, memberJID.toString(), subject, replyTo, body, id);
-            }
+                for (JID memberJID : group.getAdmins())
+                {
+                    sendMessage(fromUser, from, memberJID.toString(), subject, replyTo, body, id);
+                }
 
-            // message blast to bloggers group
+                // message blast to bloggers group using webpush if selected
 
-            String groupName = JiveGlobals.getProperty("solo.blog.name", "solo");
+                String groupName = JiveGlobals.getProperty("solo.blog.name", "solo");
 
-            if (groupName.equals(group.getName()))
-            {
-                MeetController.getInstance().groupWebPush(groupName, body);
+                if (groupName.equals(group.getName()))
+                {
+                    MeetController.getInstance().groupWebPush(groupName, body);
+                }
             }
         }
     }

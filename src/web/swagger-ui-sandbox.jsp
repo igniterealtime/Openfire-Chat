@@ -28,11 +28,19 @@
 <%@ taglib uri="http://java.sun.com/jstl/core_rt" prefix="c"%>
 <%@ taglib uri="http://java.sun.com/jstl/fmt_rt" prefix="fmt" %>
 <jsp:useBean id="webManager" class="org.jivesoftware.util.WebManager"  />
-<% webManager.init(request, response, session, application, out ); %>
+<% 
+    webManager.init(request, response, session, application, out ); 
+    
+    String hostname = JiveGlobals.getProperty("network.interface", XMPPServer.getInstance().getServerInfo().getHostname());
+    String port = JiveGlobals.getBooleanProperty("ofchat.swagger.secure", false) ? JiveGlobals.getProperty("httpbind.port.secure", "7443") : JiveGlobals.getProperty("httpbind.port.plain", "7070");
+    String protocol = JiveGlobals.getBooleanProperty("ofchat.swagger.secure", false) ? "https://" : "http://";
+    
+    String url = protocol + hostname + ":" + port + "/swagger";    
+%>
 
 <html>
 <head>
-<title>Chat API Sandbox</title>
+<title><fmt:message key="admin.sidebar.webclients.item.swagger.description" /></title>
 <meta name="pageID" content="swagger-ui"/>
 <style type="text/css">
     #jive-main table, #jive-main-content {
@@ -41,6 +49,6 @@
 </style>
 </head>
 <body>
-<iframe frameborder='0' style='border:0px; border-width:0px; margin-left: 0px; margin-top: 0px; margin-right: 0px; margin-bottom: 0px; width:100%;height:100%;' src='<%=  "https://" + JiveGlobals.getProperty("network.interface", XMPPServer.getInstance().getServerInfo().getHostname()) + ":" + JiveGlobals.getProperty("httpbind.port.secure", "7443") + "/swagger" %>'></iframe>
+<iframe frameborder='0' style='border:0px; border-width:0px; margin-left: 0px; margin-top: 0px; margin-right: 0px; margin-bottom: 0px; width:100%;height:100%;' src='<%= url %>'></iframe>
 </body>
 </html>

@@ -60,6 +60,7 @@ import org.jxmpp.jid.parts.Resourcepart;
 import org.jxmpp.stringprep.XmppStringprepException;
 
 import org.jivesoftware.openfire.*;
+import org.jivesoftware.openfire.session.ClientSession;
 import org.jivesoftware.openfire.user.User;
 import org.jivesoftware.openfire.user.UserAlreadyExistsException;
 import org.jivesoftware.openfire.user.UserManager;
@@ -91,8 +92,7 @@ import org.eclipse.jetty.servlets.EventSourceServlet;
 
 import org.ifsoft.meet.MeetController;
 import org.jivesoftware.spark.plugin.fileupload.UploadRequest;
-import org.ifsoft.sms.Servlet;
-import org.jivesoftware.openfire.plugin.rest.dao.PropertyDAO;
+
 
 
 /**
@@ -191,17 +191,13 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
                 connection = new OpenfireConnection(config);
                 connection.anonymous = anonymous;
+
+                Roster.getInstanceFor(connection).setSubscriptionMode(Roster.SubscriptionMode.accept_all);
+
                 connection.connect();
                 connection.login();
 
                 final OpenfireConnection conn = connection;
-
-                connection.stanzaListener = new StanzaListener()
-                {
-                    public void processStanza(Stanza packet) {
-                        //conn.processMessageStanza(packet);
-                    }
-                };
 
                 connection.addAsyncStanzaListener(connection.stanzaListener, new PacketTypeFilter(Message.class));
                 connections.put(connection.getStreamId(), connection);
@@ -333,66 +329,6 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
         return new RosterEntities(rosterEntities);
     }
 
-    public static void smsIncoming(JSONObject sms)
-    {
-        /*  nexmo sms messages
-
-            https://desktop-545pc5b:7443/apps/sms?to=12817649550&text=hello&msisdn=447555129550&type=text&keyword=HELLO
-
-            messageId: 0B00000006214E86
-            to: 12817649550
-            text: Helli
-            msisdn: 447555129550
-            type: text
-            keyword: HELLI
-            message-timestamp: 2018-08-24 13:09:53
-
-            network-code: 23415
-            price: 0.03330000
-            messageId: 0C000000DD800584
-            scts: 1808241943
-            to: 12817649550
-            err-code: 0
-            msisdn: 447555129550
-            message-timestamp: 2018-08-24 19:43:55
-            status: accepted
-
-            network-code: 23415
-            price: 0.03330000
-            messageId: 0C000000DD800584
-            scts: 1808241944
-            to: 12817649550
-            err-code: 0
-            msisdn: 447555129550
-            message-timestamp: 2018-08-24 19:44:00
-            status: delivered
-
-        */
-
-        if (sms.has("text") && sms.has("keyword") && sms.has("msisdn") && sms.has("to"))
-        {
-            try {
-                List<String> fromUsers = PropertyDAO.getUsernameByProperty("sms_in_number", sms.getString("msisdn"));
-                List<String> toUsers = PropertyDAO.getUsernameByProperty("sms_out_number", sms.getString("to"));
-
-                if (fromUsers.size() > 0 && toUsers.size() > 0)
-                {
-                    if (fromUsers.size() > 1 || toUsers.size() > 1) Log.warn("smsIncoming - multiple users with " + sms.getString("msisdn") + " or " + sms.getString("to"));
-
-                    UserManager userManager = XMPPServer.getInstance().getUserManager().getInstance();
-                    User fromUser = userManager.getUser(fromUsers.get(0));
-                    User toUser = userManager.getUser(toUsers.get(0));
-
-                    OpenfireConnection smsConnTo = createConnection(toUsers.get(0), null, false);
-                    OpenfireConnection smsConnFrom = createConnection(fromUsers.get(0), null, false);
-
-                    smsConnFrom.sendChatMessage(sms.getString("text"), toUsers.get(0) + "@" + domain);
-                }
-            } catch (Exception e) {
-                Log.error("smsIncoming", e);
-            }
-        }
-    }
 
     // -------------------------------------------------------
     //
@@ -659,17 +595,20 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
             }
 
             try {
+                Message newMessage = new Message();
+
                 JSONObject jsonBody = new JSONObject(message);
 
                 if (jsonBody.has("body"))
                 {
-                    Message newMessage = new Message();
                     newMessage.setType(Message.Type.chat);
                     newMessage.setBody(jsonBody.getString("body"));
-                    JivePropertiesManager.addProperty(newMessage, "data", message);
-                    chat.send(newMessage);
-                    return true;
                 }
+
+                JivePropertiesManager.addProperty(newMessage, "data", message);
+                chat.send(newMessage);
+                return true;
+
             } catch (Exception e1) { }
 
             chat.send(message);
@@ -768,39 +707,6 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
                         String data = (String) JivePropertiesManager.getProperty(message, "data");
                         clientServlet.broadcast("chatapi.chat", "{\"type\": \"" + message.getType() + "\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\", \"data\":" + data + ", \"body\": \"" + message.getBody() + "\"}");
 
-                        if (JiveGlobals.getBooleanProperty("ofchat.sms.enabled", false))
-                        {
-                            try {
-                                String from = message.getFrom().getLocalpartOrNull().toString();
-                                String to = message.getTo().getLocalpartOrNull().toString();
-
-                                UserManager userManager = XMPPServer.getInstance().getUserManager().getInstance();
-                                User fromUser = userManager.getUser(from);
-                                User toUser = userManager.getUser(to);
-
-                                String smsFrom = fromUser.getProperties().get("sms_out_number");
-                                String smsTo = toUser.getProperties().get("sms_in_number");
-                                String body = message.getBody();
-
-                                if (smsFrom != null && smsTo != null)
-                                {
-                                    try {
-                                        JSONObject jsonBody = new JSONObject(body);
-
-                                        if (jsonBody.has("body"))
-                                        {
-                                            body = jsonBody.getString("body");
-                                        }
-                                    } catch (Exception e1) {}
-
-                                    Servlet.smsOutgoing(smsTo, smsFrom, body);
-                                }
-
-                            } catch (Exception e) {
-                                Log.error("processMessageStanza", e);
-                            }
-                        }
-
                     } else {
 
                         GroupChatInvitation invitation = (GroupChatInvitation)packet.getExtension(GroupChatInvitation.ELEMENT, GroupChatInvitation.NAMESPACE);
@@ -814,6 +720,14 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
                             } catch (Exception e) {
                                 Log.error("invitationReceived", e);
+                            }
+                        }
+                        else {
+                            String data = (String) JivePropertiesManager.getProperty(message, "data");
+
+                            if (data != null)
+                            {
+                                clientServlet.broadcast("chatapi.notify", "{\"type\": \"notify\", \"to\":\"" + message.getTo() + "\", \"from\":\"" + message.getFrom() + "\", \"data\":" + data + "}");
                             }
                         }
                     }
@@ -914,16 +828,18 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
             if (text.startsWith("{") && text.endsWith("}"))
             {
                 try {
+                    Message newMessage = new Message();
                     JSONObject jsonBody = new JSONObject(text);
 
                     if (jsonBody.has("body"))
                     {
-                        Message newMessage = new Message();
+                        newMessage.setType(Message.Type.groupchat);
                         newMessage.setBody(jsonBody.getString("body"));
-                        JivePropertiesManager.addProperty(newMessage, "data", text);
-                        groupchats.get(mGroupChatName).sendMessage(newMessage);
-                        return true;
                     }
+
+                    JivePropertiesManager.addProperty(newMessage, "data", text);
+                    groupchats.get(mGroupChatName).sendMessage(newMessage);
+                    return true;
                 } catch (Exception e1) { }
             }
             groupchats.get(mGroupChatName).sendMessage(text);

@@ -110,7 +110,7 @@
 <div id="message-bar" class="swagger-ui-wrap" data-sw-translate>&nbsp;</div>
 -->
 <div style="float: right;">
-    <button onclick="navigator.registerProtocolHandler('web+chat', window.location.protocol + '//' + window.location.host + '/meet/custom?url=%s', 'Chat API');">Enable web+chat custom url protocol</button>
+    <!--<button onclick="navigator.registerProtocolHandler('web+chat', window.location.protocol + '//' + window.location.host + '/meet/custom?url=%s', 'Chat API');">Enable web+chat custom url protocol</button>-->
 </div>
 <div id="swagger-ui-container" class="swagger-ui-wrap"></div>
 </body>

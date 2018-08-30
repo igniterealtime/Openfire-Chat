@@ -10,12 +10,13 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import java.util.*;
+import java.util.concurrent.*;
 import javax.servlet.*;
 import javax.servlet.http.*;
 import java.io.*;
 import java.nio.file.*;
 
-import org.jivesoftware.smack.OpenfireConnection;
+import org.jivesoftware.openfire.plugin.rest.RESTServicePlugin;
 import org.jivesoftware.util.*;
 
 import net.sf.json.*;
@@ -35,19 +36,39 @@ public class Servlet extends HttpServlet
         String NEXMO_API_KEY = JiveGlobals.getProperty("nexmo.api.key", "ae9a4714");
         String NEXMO_API_SECRET = JiveGlobals.getProperty("nexmo.api.secret", "uvyh3PU2VEbzpiJH");
 
-        try {
-            AuthMethod auth = new TokenAuthMethod(NEXMO_API_KEY, NEXMO_API_SECRET);
-            NexmoClient client = new NexmoClient(auth);
+        ExecutorService executor = Executors.newCachedThreadPool();
 
-            SmsSubmissionResult[] responses = client.getSmsClient().submitMessage(new TextMessage(source, destination, body));
-
-            for (SmsSubmissionResult resp : responses)
+        executor.submit(new Callable<Boolean>()
+        {
+            public Boolean call() throws Exception
             {
-                Log.info("smsOutgoing " + resp);
+                try {
+                    AuthMethod auth = new TokenAuthMethod(NEXMO_API_KEY, NEXMO_API_SECRET);
+                    NexmoClient client = new NexmoClient(auth);
+
+                    SmsSubmissionResult[] responses = client.getSmsClient().submitMessage(new TextMessage(source, destination, body));
+
+                    for (SmsSubmissionResult resp : responses)
+                    {
+                        Log.info("smsOutgoing " + resp);
+                    }
+
+                    String NEXMO_WAIT = JiveGlobals.getProperty("nexmo.api.wait", "1000");
+
+                    try {
+                        int wait = Integer.parseInt(NEXMO_WAIT);
+                        Thread.sleep(wait);
+
+                    } catch (Exception e) {
+                        Log.error("smsOutgoing", e);
+                    }
+
+                } catch (Exception e) {
+                    Log.error("smsOutgoing", e);
+                }
+                return true;
             }
-        } catch (Exception e) {
-            Log.error("smsOutgoing", e);
-        }
+        });
     }
 
     @Override
@@ -65,7 +86,7 @@ public class Servlet extends HttpServlet
                 Log.info("smsIncoming " + parameter + "=" + values[0]);
             }
 
-            OpenfireConnection.smsIncoming(sms);
+            RESTServicePlugin.smsIncoming(sms);
 
         } catch (Exception e) {
             Log.error("smsIncoming", e);

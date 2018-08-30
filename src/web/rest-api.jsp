@@ -25,6 +25,16 @@
     String secret = ParamUtils.getParameter(request, "secret");
     String permission = ParamUtils.getParameter(request, "permission");    
     boolean enabled = ParamUtils.getBooleanParameter(request, "enabled");
+    
+    String sms_enabled = request.getParameter("smsEnabled");    
+    boolean smsEnabled = sms_enabled != null && sms_enabled.equals("on");
+    
+    String adhoc_enabled = request.getParameter("adhocEnabled");    
+    boolean adhocEnabled = adhoc_enabled != null && adhoc_enabled.equals("on");    
+    
+    String swagger_secure = request.getParameter("swaggerSecure");    
+    boolean swaggerSecure = swagger_secure != null && swagger_secure.equals("on");       
+    
     String httpAuth = ParamUtils.getParameter(request, "authtype");
     String allowedIPs = ParamUtils.getParameter(request, "allowedIPs");
     String customAuthFilterClassName = ParamUtils.getParameter(request, "customAuthFilterClassName");
@@ -57,6 +67,9 @@
             
             boolean is2Reload = "custom".equals(httpAuth) || "custom".equals(plugin.getHttpAuth());
             plugin.setEnabled(enabled);
+            plugin.setSmsEnabled(smsEnabled);            
+            plugin.setAdhocEnabled(adhocEnabled);               
+            plugin.setSwaggerSecure(swaggerSecure);                
             plugin.setPermission(permission);               
             plugin.setSecret(secret);
             plugin.setHttpAuth(httpAuth);
@@ -80,6 +93,9 @@
     secret = plugin.getSecret();
     permission = plugin.getPermission();    
     enabled = plugin.isEnabled();
+    smsEnabled = plugin.isSmsEnabled();
+    adhocEnabled = plugin.isAdhocEnabled();    
+    swaggerSecure = plugin.isSwaggerSecure();    
     httpAuth = plugin.getHttpAuth();
     allowedIPs = StringUtils.collectionToString(plugin.getAllowedIPs());
     customAuthFilterClassName = plugin.getCustomAuthFilterClassName();
@@ -195,6 +211,16 @@
 
                     <label for="allowedIPs">Allowed IP Addresses:</label>
                     <textarea name="allowedIPs" cols="40" rows="3" wrap="virtual"><%=((allowedIPs != null) ? allowedIPs : "")%></textarea>
+                    <br>
+                    <br>
+                    
+                    <input type="checkbox" name="smsEnabled"<%= smsEnabled ? " checked" : "" %>>SMS Routing enabled
+                    <br>
+                    <input type="checkbox" name="adhocEnabled"<%= adhocEnabled ? " checked" : "" %>>Adhoc Commands via Admin User enabled
+                    <br>   
+                    <input type="checkbox" name="swaggerSecure"<%= swaggerSecure ? " checked" : "" %>>Use secure port for Swagger
+                    <br>                      
+                   
                 </ul>
 
                 <p>You can find here swagger ui documentation for the Chat API: 

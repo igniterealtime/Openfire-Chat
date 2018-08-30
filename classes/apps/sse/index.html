@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8" />
@@ -36,47 +35,42 @@
 
      source.addEventListener('chatapi.presence', function(e)
      {
-        console.log("chatapi.presence", e);
+        console.log("chatapi.presence", JSON.parse(e.data));
         document.getElementById('content').innerHTML += e.data + '<br/>';
      });
 
      source.addEventListener('chatapi.chat', function(e)
      {
-        console.log("chatapi.chat", e);
+        console.log("chatapi.chat", JSON.parse(e.data));
         document.getElementById('content').innerHTML += e.data + '<br/>';
      });
 
      source.addEventListener('chatapi.muc', function(e)
      {
-        console.log("chatapi.muc", e);
+        console.log("chatapi.muc", JSON.parse(e.data));
         document.getElementById('content').innerHTML += e.data + '<br/>';
      });
 
      source.addEventListener('chatapi.ask', function(e)
      {
-        console.log("chatapi.ask", e);
+        console.log("chatapi.ask", JSON.parse(e.data));
         document.getElementById('content').innerHTML += e.data + '<br/>';
      });
 
      source.addEventListener('chatapi.assist', function(e)
      {
-        console.log("chatapi.assist", e);
+        console.log("chatapi.assist", JSON.parse(e.data));
         document.getElementById('content').innerHTML += e.data + '<br/>';
      });
 
      source.addEventListener('chatapi.xmpp', function(e)
      {
-        console.debug("chatapi.xmpp", e);
+        console.debug("chatapi.xmpp", JSON.parse(e.data));
      });
 
-     source.addEventListener('traderlynk.tincan', function(e)
+     source.addEventListener('chatapi.notify', function(e)
      {
-        console.debug("traderlynk.tincan", e);
-     });
-
-     source.addEventListener('chatapi.openlink.callstatus', function(e)
-     {
-        console.log("chatapi.openlink.callstatus", e);
+        console.log("chatapi.notify", JSON.parse(e.data));
         document.getElementById('content').innerHTML += e.data + '<br/>';
      });
 

@@ -397,13 +397,14 @@ TL_MessageBlast.Newblast = (function () {
     var otherecipsarray = otherecips.split(',')
 
         // validate valid email
-    var mailformat = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/
+        // BAO disable for now TODO
+    //var mailformat = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/
     var validadditionalemails = []
 
     for (var i = 0; i < otherecipsarray.length; i++) {
-      if (otherecipsarray[i].match(mailformat)) {
+      //if (otherecipsarray[i].match(mailformat)) {
         validadditionalemails.push(otherecipsarray[i])
-      }
+      //}
     };
 
     if (otherecips.length > 1) {

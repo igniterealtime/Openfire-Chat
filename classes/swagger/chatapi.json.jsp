@@ -1,16 +1,19 @@
-<%@ page import="org.jivesoftware.util.*,
-         org.jivesoftware.openfire.*,
-                 java.util.*,
-                 java.net.URLEncoder" 
+<%@ page import="org.jivesoftware.util.*, org.jivesoftware.openfire.*, java.util.*, java.net.URLEncoder"  %>
+<%
+    String hostname = JiveGlobals.getProperty("network.interface", XMPPServer.getInstance().getServerInfo().getHostname());
+    String port = JiveGlobals.getBooleanProperty("ofchat.swagger.secure", false) ? JiveGlobals.getProperty("httpbind.port.secure", "7443") : JiveGlobals.getProperty("httpbind.port.plain", "7070");
+    String host = hostname + ":" + port;
+    
+    String version = XMPPServer.getInstance().getPluginManager().getMetadataExtractedPlugins().get("ofchat").getVersion().getVersionString();
 %>
 {
     "swagger":"2.0",
     "info":{
     "description": "Chat API REST+SSE Documentation",    
-        "version":"0.9.4",
+        "version":"<%= version %>",
         "title":"Chat API for Openfire Meetings"
     },
-    "host":"<%= JiveGlobals.getProperty("network.interface", XMPPServer.getInstance().getServerInfo().getHostname()) + ":" + JiveGlobals.getProperty("httpbind.port.secure", "7443") %>",
+    "host":"<%= host %>",
     "basePath":"/rest/api",
     "tags": [
     {
@@ -3648,7 +3651,7 @@
                     "Blast"
                 ], 
                 "summary": "Send Message blast",
-                "description": "Sends message blasts and returns response ok or fails and returns bad request.\n Dates should be in format yyyy-MM-dd HH:mm:ss.S (2013-09-27 00:00:00.0)",   
+                "description": "Sends message blasts and returns response ok or fails and returns bad request.\n Dates should be in format yyyy-MM-dd HH:mm:ss.S (2013-09-27 00:00:00.0).\n Recipient can be an xmpp address, openfire group or sms number starting with +",   
                 "consumes":[
 
                 ],
@@ -3882,11 +3885,11 @@
         },
         "/restapi/v1/sessions":{
             "get":{
-        "tags": [
-            "Admin"
-        ],
-        "summary": "Retrieve all user sessions",
-        "description": "",                
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Retrieve all user sessions",
+                "description": "",                
                 "consumes":[
                 ],
                 "produces":[
@@ -3905,15 +3908,43 @@
                         }
                     }
                 }
-            }
+            },
+            "post":{
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Send a notification to all user sessions",
+                "description": "Use this to send a JSON payload to all active user sessions",             
+                "consumes":[
+                ],
+                "produces":[
+                ],
+                "parameters":[
+                    {
+                        "name":"payload",
+                        "in":"body",
+                        "required":true,
+                        "schema":{
+                            "type":"string"
+                        }
+                    }
+                ],
+                "responses":{
+                    "200":{
+                        "description":"OK",
+                        "headers":{
+                        }
+                    }
+                }
+            }            
         },
         "/restapi/v1/sessions/{username}":{
             "get":{
-        "tags": [
-            "Admin"
-        ],
-        "summary": "Retrieve all a users sessions",
-        "description": "",               
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Retrieve all a users sessions",
+                "description": "",               
                 "consumes":[
                 ],
                 "produces":[
@@ -3939,12 +3970,46 @@
                     }
                 }
             },
+            "post":{
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Send a notification to a specific user session",
+                "description": "Use this to send a JSON payload to a specific active user session",             
+                "consumes":[
+                ],
+                "produces":[
+                ],
+                "parameters":[
+                    {
+                        "type":"string",
+                        "name":"username",
+                        "in":"path",
+                        "required":true
+                    },                
+                    {
+                        "name":"payload",
+                        "in":"body",
+                        "required":true,
+                        "schema":{
+                            "type":"string"
+                        }
+                    }
+                ],
+                "responses":{
+                    "200":{
+                        "description":"OK",
+                        "headers":{
+                        }
+                    }
+                }
+            },            
             "delete":{
-        "tags": [
-            "Admin"
-        ],
-        "summary": "Close/kick sessions from a user",
-        "description": "",             
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Close/kick sessions from a user",
+                "description": "",             
                 "consumes":[
                 ],
                 "produces":[
@@ -3969,11 +4034,11 @@
         
         "/restapi/v1/sipaccounts":{
             "get":{
-        "tags": [
-            "Admin"
-        ],
-        "summary": "Fetches a list of user sip accounts",
-        "description": "",               
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Fetches a list of user sip accounts",
+                "description": "",               
                 "consumes":[
                 ],
                 "produces":[
