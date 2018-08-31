@@ -51,6 +51,7 @@ import org.jivesoftware.openfire.plugin.rest.entity.OccupantEntities;
 import org.jivesoftware.openfire.plugin.rest.entity.ParticipantEntities;
 import org.jivesoftware.openfire.plugin.rest.entity.WorkgroupEntities;
 import org.jivesoftware.openfire.plugin.rest.entity.AssistQueues;
+import org.jivesoftware.openfire.plugin.rest.entity.MUCRoomMessageEntities;
 
 import org.jivesoftware.openfire.user.*;
 import org.jivesoftware.openfire.SharedGroupException;
@@ -681,6 +682,14 @@ public class ChatService {
     public OccupantEntities getMUCRoomOccupants(@PathParam("roomName") String roomName, @DefaultValue("conference") @QueryParam("servicename") String serviceName)
     {
         return MUCRoomController.getInstance().getRoomOccupants(roomName, serviceName);
+    }
+
+    @GET
+    @Path("/rooms/{roomName}/chathistory")
+    @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
+    public MUCRoomMessageEntities getMUCRoomHistory(@PathParam("roomName") String roomName, @DefaultValue("conference") @QueryParam("servicename") String serviceName) throws ServiceException
+    {
+        return MUCRoomController.getInstance().getRoomHistory(roomName, serviceName);
     }
 
     @PUT

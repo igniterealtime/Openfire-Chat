@@ -1016,13 +1016,52 @@
                 }
             },
         },
+        "/restapi/v1/chat/rooms/{roomName}/chathistory":{
+            "get":{
+                "tags": [
+                    "Chat"
+                ],     
+                "summary": "Retrieve chat history of a specified groupchat/muc room.",
+                "description": "",              
+                "consumes":[
+                ],
+                "produces":[
+                    "application/json",
+                    "application/xml"
+                ],
+                "parameters":[
+                    {
+                        "type":"string",
+                        "name":"roomName",
+                        "in":"path",
+                        "required":true
+                    },
+                    {
+                        "type":"string",
+                        "name":"servicename",
+                        "in":"query",
+                        "required":false
+                    }
+                ],
+                "responses":{
+                    "200":{
+                        "description":"OK",
+                        "headers":{
+                        },
+                        "schema":{
+                            "$ref":"#/definitions/MUCRoomMessageEntities"
+                        }
+                    }
+                }
+            }
+        },         
         "/restapi/v1/chat/rooms/{roomName}/occupants":{
             "get":{
-        "tags": [
-            "Chat"
-        ],   
-        "summary": "Retrieve a list of groupchat/muc room occupants",
-        "description": "",      
+                "tags": [
+                    "Chat"
+                ],   
+                "summary": "Retrieve a list of groupchat/muc room occupants",
+                "description": "",      
                 "consumes":[
                 ],
                 "produces":[
@@ -2305,11 +2344,11 @@
         },
         "/restapi/v1/chatrooms/{roomName}/admins/{jid}":{
             "post":{
-        "tags": [
-            "Admin"
-        ],    
-        "summary": "Add a user with admin role to chat room",
-        "description": "",               
+                "tags": [
+                    "Admin"
+                ],    
+                "summary": "Add a user with admin role to chat room",
+                "description": "",               
                 "consumes":[
                 ],
                 "produces":[
@@ -2343,11 +2382,11 @@
                 }
             },
             "delete":{
-        "tags": [
-            "Admin"
-        ],    
-        "summary": "Delete a user with admin role to chat room",
-        "description": "",              
+                "tags": [
+                    "Admin"
+                ],    
+                "summary": "Delete a user with admin role to chat room",
+                "description": "",              
                 "consumes":[
                 ],
                 "produces":[
@@ -2381,13 +2420,52 @@
                 }
             }
         },
+        "/restapi/v1/chatrooms/{roomName}/chathistory":{
+            "get":{
+                "tags": [
+                    "Admin"
+                ],     
+                "summary": "Retrieve chat history of a specified room.",
+                "description": "",              
+                "consumes":[
+                ],
+                "produces":[
+                    "application/json",
+                    "application/xml"
+                ],
+                "parameters":[
+                    {
+                        "type":"string",
+                        "name":"roomName",
+                        "in":"path",
+                        "required":true
+                    },
+                    {
+                        "type":"string",
+                        "name":"servicename",
+                        "in":"query",
+                        "required":false
+                    }
+                ],
+                "responses":{
+                    "200":{
+                        "description":"OK",
+                        "headers":{
+                        },
+                        "schema":{
+                            "$ref":"#/definitions/MUCRoomMessageEntities"
+                        }
+                    }
+                }
+            }
+        },        
         "/restapi/v1/chatrooms/{roomName}/members/group/{groupname}":{
             "post":{
-        "tags": [
-            "Admin"
-        ],    
-        "summary": "Add a new group with member role to a room",
-        "description": "",               
+                "tags": [
+                    "Admin"
+                ],    
+                "summary": "Add a new group with member role to a room",
+                "description": "",               
                 "consumes":[
                 ],
                 "produces":[
@@ -2421,11 +2499,11 @@
                 }
             },
             "delete":{
-        "tags": [
-            "Admin"
-        ],     
-        "summary": "Delete a new group with member role to a room",
-        "description": "",                
+                "tags": [
+                    "Admin"
+                ],     
+                "summary": "Delete a new group with member role to a room",
+                "description": "",                
                 "consumes":[
                 ],
                 "produces":[
@@ -2461,11 +2539,11 @@
         },
         "/restapi/v1/chatrooms/{roomName}/members/{jid}":{
             "post":{
-        "tags": [
-            "Admin"
-        ],    
-        "summary": "Add a user with member role to chat room",
-        "description": "",                 
+                "tags": [
+                    "Admin"
+                ],    
+                "summary": "Add a user with member role to chat room",
+                "description": "",                 
                 "consumes":[
                 ],
                 "produces":[
@@ -2539,11 +2617,11 @@
         },
         "/restapi/v1/chatrooms/{roomName}/occupants":{
             "get":{
-        "tags": [
-            "Admin"
-        ],     
-        "summary": "Retrieve all occupants (all roles / affiliations) of a specified room.",
-        "description": "",              
+                "tags": [
+                    "Admin"
+                ],     
+                "summary": "Retrieve all occupants (all roles / affiliations) of a specified room.",
+                "description": "",              
                 "consumes":[
                 ],
                 "produces":[
@@ -5838,6 +5916,38 @@
                 "jid":{
                     "type":"string"
                 }
+            }
+        }, 
+        "MUCRoomMessageEntities":{
+            "properties":{
+                "occupants":{
+                    "type":"array",
+                    "items":{
+                        "$ref":"#/definitions/MUCRoomMessageEntity"
+                    }
+                }
+            }
+        },
+        "MUCRoomMessageEntity":{
+            "properties":{
+                "to":{
+                    "type":"string"
+                },
+                "from":{
+                    "type":"string"
+                },
+                "type":{
+                    "type":"string"
+                },
+                "body":{
+                    "type":"string"
+                },
+                "delayStamp":{
+                    "type":"string"
+                },
+                "delayFrom":{
+                    "type":"string"
+                }                
             }
         },
         "OccupantEntities":{
