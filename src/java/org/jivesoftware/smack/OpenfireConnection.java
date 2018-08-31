@@ -199,6 +199,13 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
                 final OpenfireConnection conn = connection;
 
+                connection.stanzaListener = new StanzaListener()
+                {
+                    public void processStanza(Stanza packet) {
+                        //conn.processMessageStanza(packet);
+                    }
+                };
+
                 connection.addAsyncStanzaListener(connection.stanzaListener, new PacketTypeFilter(Message.class));
                 connections.put(connection.getStreamId(), connection);
 
