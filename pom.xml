@@ -138,6 +138,7 @@
                 <configuration>
                     <webAppSourceDirectory>${project.build.sourceDirectory}/../web</webAppSourceDirectory>
                     <webXml>${project.build.sourceDirectory}/../web/WEB-INF/web.xml</webXml>
+                    <keepSources>true</keepSources>
                 </configuration>
                 <executions>
                     <execution>
@@ -146,6 +147,7 @@
                         <goal>jspc</goal>
                     </goals>
                     <configuration>
+                        <keepSources>true</keepSources>                    
                         <jspc>
                         <package>org.jivesoftware.openfire.plugin.${project.artifactId}</package>
                         </jspc>
@@ -388,12 +390,21 @@
             <artifactId>quartz</artifactId>
             <version>2.2.2</version>
         </dependency>       
+
+        <!-- sms providers -->
         
         <dependency>
               <groupId>com.nexmo</groupId>
               <artifactId>client</artifactId>
               <version>3.7.0</version>
-        </dependency>         
+        </dependency>  
+        
+        <dependency>
+            <groupId>com.twilio.sdk</groupId>
+            <artifactId>twilio</artifactId>
+            <version>7.24.2</version>
+        </dependency>   
+        
     </dependencies>
 
 </project>

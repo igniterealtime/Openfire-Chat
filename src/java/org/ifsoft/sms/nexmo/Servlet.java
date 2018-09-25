@@ -1,4 +1,4 @@
-package org.ifsoft.sms;
+package org.ifsoft.sms.nexmo;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,7 +10,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import java.util.*;
-import java.util.concurrent.*;
 import javax.servlet.*;
 import javax.servlet.http.*;
 import java.io.*;
@@ -27,48 +26,41 @@ import com.nexmo.client.auth.TokenAuthMethod;
 import com.nexmo.client.sms.messages.TextMessage;
 import com.nexmo.client.sms.SmsSubmissionResult;
 
+
 public class Servlet extends HttpServlet
 {
     private static final Logger Log = LoggerFactory.getLogger( Servlet.class );
 
-    public static void smsOutgoing(String destination, String source, String body)
+    public synchronized static void smsOutgoing(String destination, String source, String body)
     {
-        String NEXMO_API_KEY = JiveGlobals.getProperty("nexmo.api.key", "ae9a4714");
-        String NEXMO_API_SECRET = JiveGlobals.getProperty("nexmo.api.secret", "uvyh3PU2VEbzpiJH");
+        String NEXMO_API_KEY = JiveGlobals.getProperty("nexmo.api.key", null);
+        String NEXMO_API_SECRET = JiveGlobals.getProperty("nexmo.api.secret", null);
 
-        ExecutorService executor = Executors.newCachedThreadPool();
+        try {
+            AuthMethod auth = new TokenAuthMethod(NEXMO_API_KEY, NEXMO_API_SECRET);
+            NexmoClient client = new NexmoClient(auth);
 
-        executor.submit(new Callable<Boolean>()
-        {
-            public Boolean call() throws Exception
+            SmsSubmissionResult[] responses = client.getSmsClient().submitMessage(new TextMessage(source, destination, body));
+
+            for (SmsSubmissionResult resp : responses)
             {
-                try {
-                    AuthMethod auth = new TokenAuthMethod(NEXMO_API_KEY, NEXMO_API_SECRET);
-                    NexmoClient client = new NexmoClient(auth);
-
-                    SmsSubmissionResult[] responses = client.getSmsClient().submitMessage(new TextMessage(source, destination, body));
-
-                    for (SmsSubmissionResult resp : responses)
-                    {
-                        Log.info("smsOutgoing " + resp);
-                    }
-
-                    String NEXMO_WAIT = JiveGlobals.getProperty("nexmo.api.wait", "1000");
-
-                    try {
-                        int wait = Integer.parseInt(NEXMO_WAIT);
-                        Thread.sleep(wait);
-
-                    } catch (Exception e) {
-                        Log.error("smsOutgoing", e);
-                    }
-
-                } catch (Exception e) {
-                    Log.error("smsOutgoing", e);
-                }
-                return true;
+                Log.info("smsOutgoing " + resp);
             }
-        });
+
+            String NEXMO_WAIT = JiveGlobals.getProperty("nexmo.api.wait", "1000");
+
+            try {
+                int wait = Integer.parseInt(NEXMO_WAIT);
+                Thread.sleep(wait);
+
+            } catch (Exception e) {
+                Log.error("smsOutgoing", e);
+            }
+
+        } catch (Exception e) {
+            Log.error("smsOutgoing", e);
+        }
+
     }
 
     @Override

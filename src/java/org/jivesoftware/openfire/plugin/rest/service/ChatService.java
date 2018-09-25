@@ -415,22 +415,40 @@ public class ChatService {
     }
 
     @GET
-    @Path("/{streamid}/messages")
+    @Path("/{username}/messages")
     @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
-    public Conversations getConversations(@PathParam("streamid") String streamid, @QueryParam("keywords") String keywords, @QueryParam("to") String to, @QueryParam("start") String start, @QueryParam("end") String end, @QueryParam("room") String room, @DefaultValue("conference") @QueryParam("service") String service) throws ServiceException
+    public Conversations getConversations(@PathParam("username") String username, @QueryParam("keywords") String keywords, @QueryParam("to") String to, @QueryParam("start") String start, @QueryParam("end") String end, @QueryParam("room") String room, @DefaultValue("conference") @QueryParam("service") String service, String password) throws ServiceException
     {
-        Log.debug("getConversations " + streamid + " " + keywords + " " + " " + to  + " " + start + " " + end + " " + room + " " + service);
+        Log.debug("getConversations " + username + " " + keywords + " " + " " + to  + " " + start + " " + end + " " + room + " " + service);
 
         try {
-            OpenfireConnection connection = OpenfireConnection.getConnection(streamid);
+            // can be done out of band
+            // authentication required. secret, admin user or authenicated user
 
-            if (connection == null)
+            String token = httpRequest.getHeader("authorization");
+
+            if (token != null)
             {
-                throw new ServiceException("Exception", "xmpp connection not found", ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+                if (!token.equals(RESTServicePlugin.getInstance().getSecret()))
+                {
+                    String[] usernameAndPassword = BasicAuth.decode(token.substring(6));
+                    usernameAndPassword = BasicAuth.decode(token);
+
+                    if (usernameAndPassword != null && usernameAndPassword.length == 2)
+                    {
+                        AuthFactory.authenticate( usernameAndPassword[0], usernameAndPassword[1] );
+
+                    } else {
+                        throw new ServiceException("Exception", "not authorized", ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+                    }
+                 }  // else ok
+
+            } else {
+                AuthFactory.authenticate( username, password );
             }
 
             ArchiveSearch search = new ArchiveSearch();
-            JID participant1JID = makeJid(connection.getUsername());
+            JID participant1JID = makeJid(username);
             JID participant2JID = null;
 
             if (to != null) participant2JID = makeJid(to);

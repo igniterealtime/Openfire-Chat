@@ -95,7 +95,6 @@ import org.ifsoft.meet.*;
 import org.xmpp.packet.*;
 import org.dom4j.Element;
 import net.sf.json.*;
-import org.ifsoft.sms.Servlet;
 
 import org.traderlynk.blast.MessageBlastService;
 import org.jivesoftware.openfire.sip.sipaccount.SipAccount;
@@ -125,6 +124,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
     /** The enabled. */
     private boolean enabled;
     private boolean smsEnabled;
+    private String smsProvider;
     private boolean adhocEnabled;
     private boolean swaggerSecure;
 
@@ -143,7 +143,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
     private WebAppContext context4;
     private WebAppContext context5;
     private WebAppContext context6;
-    private WebAppContext solo;
+    private WebAppContext warfile;
     public File pluginDirectory;
 
     private ExecutorService executor;
@@ -199,6 +199,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         // See if the service is enabled or not.
         enabled = JiveGlobals.getBooleanProperty("plugin.restapi.enabled", false);
         smsEnabled = JiveGlobals.getBooleanProperty("ofchat.sms.enabled", false);
+        smsProvider = JiveGlobals.getProperty("ofchat.sms.provider", "mexmo");
         adhocEnabled = JiveGlobals.getBooleanProperty("ofchat.adhoc.commands.enabled", false);
         swaggerSecure = JiveGlobals.getBooleanProperty("ofchat.swagger.secure", false);
 
@@ -357,7 +358,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         {
             Security.addProvider( new OfChatSaslProvider() );
             SASLAuthentication.addSupportedMechanism( OfChatSaslServer.MECHANISM_NAME );
-            //loadSolo();
+            //loadWarFile();
         }
         catch ( Exception ex )
         {
@@ -491,7 +492,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             SASLAuthentication.removeSupportedMechanism( OfChatSaslServer.MECHANISM_NAME );
             Security.removeProvider( OfChatSaslProvider.NAME );
 
-            //unloadSolo();
+            //unloadWarFile();
         } catch (Exception e) {}
 
         InterceptorManager.getInstance().removeInterceptor(this);
@@ -718,10 +719,18 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         JiveGlobals.setProperty("ofchat.swagger.secure", swaggerSecure ? "true" : "false");
     }
 
+    public String getSmsProvider() {
+        return smsProvider;
+    }
+
+    public void setSmsProvider(String smsProvider) {
+        this.smsProvider = smsProvider;
+        JiveGlobals.setProperty("ofchat.sms.provider", smsProvider);
+    }
+
     public boolean isSwaggerSecure() {
         return swaggerSecure;
     }
-
 
     /**
      * Gets the http authentication mechanism.
@@ -861,7 +870,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
         Constraint constraint = new Constraint();
         constraint.setName(Constraint.__BASIC_AUTH);
-        constraint.setRoles(new String[]{"ofchat", "blog-owner", "blog-contributor", "solo-admin"});
+        constraint.setRoles(new String[]{"ofchat", "webapp-owner", "webapp-contributor", "warfile-admin"});
         constraint.setAuthenticate(true);
 
         ConstraintMapping cm = new ConstraintMapping();
@@ -1045,7 +1054,10 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
                                     }
                                 } catch (Exception e1) {}
 
-                                Servlet.smsOutgoing(smsTo, smsFrom, body);
+                                if ("nexmo".equals(JiveGlobals.getProperty("ofchat.sms.provider", "nexmo")))
+                                {
+                                    org.ifsoft.sms.nexmo.Servlet.smsOutgoing(smsTo, smsFrom, body);
+                                }
                             }
                         }
 
@@ -1198,10 +1210,10 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
     //
     // -------------------------------------------------------
 
-    protected void loadSolo() throws Exception
+    protected void loadWarFile() throws Exception
     {
-        Log.info( "Initializing solo application" );
-        Log.debug( "Identify the name of the solo archive file" );
+        Log.info( "Initializing warfile application" );
+        Log.debug( "Identify the name of the warfile archive file" );
 
         final File libs = new File(pluginDirectory.getPath() + File.separator + "classes");
 
@@ -1209,56 +1221,56 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         {
             public boolean accept(File dir, String name)
             {
-                return name.toLowerCase().startsWith("solo") && name.toLowerCase().endsWith(".war");
+                return name.toLowerCase().endsWith(".war");
             }
         });
 
-        final File soloApp;
+        final File warfileApp;
         switch ( matchingFiles.length )
         {
             case 0:
-                Log.error( "Unable to find public web application archive for solo!" );
+                Log.error( "Unable to find public web application archive for warfile!" );
                 return;
 
             default:
-                Log.warn( "Found more than one public web application archive for solo. Using an arbitrary one." );
+                Log.warn( "Found more than one public web application archive for warfile. Using an arbitrary one." );
                 // intended fall-through.
 
             case 1:
-                soloApp = matchingFiles[0];
-                Log.debug( "Using this archive: {}", soloApp );
+                warfileApp = matchingFiles[0];
+                Log.debug( "Using this archive: {}", warfileApp );
         }
 
-        Log.debug( "Creating new WebAppContext for solo." );
+        Log.debug( "Creating new WebAppContext for warfile." );
 
-        solo = new WebAppContext();
-        solo.setWar( soloApp.getAbsolutePath() );
+        warfile = new WebAppContext();
+        warfile.setWar( warfileApp.getAbsolutePath() );
 
-        String blogName = JiveGlobals.getProperty("solo.blog.name", "blog");
-        solo.setContextPath( "/" + blogName);
+        String webappName = JiveGlobals.getProperty("warfile.webapp.name", "webapp");
+        warfile.setContextPath( "/" + webappName);
 
         final List<ContainerInitializer> initializers = new ArrayList<>();
         initializers.add(new ContainerInitializer(new JettyJasperInitializer(), null));
-        solo.setAttribute("org.eclipse.jetty.containerInitializers", initializers);
-        solo.setAttribute(InstanceManager.class.getName(), new SimpleInstanceManager());
+        warfile.setAttribute("org.eclipse.jetty.containerInitializers", initializers);
+        warfile.setAttribute(InstanceManager.class.getName(), new SimpleInstanceManager());
 
-        HttpBindManager.getInstance().addJettyHandler( solo );
+        HttpBindManager.getInstance().addJettyHandler( warfile );
 
-        Log.debug( "Initialized solo application" );
+        Log.debug( "Initialized warfile application" );
     }
 
-    public void unloadSolo() throws Exception
+    public void unloadWarFile() throws Exception
     {
-        if ( solo != null )
+        if ( warfile != null )
         {
             try
             {
-                HttpBindManager.getInstance().removeJettyHandler( solo );
-                solo.destroy();
+                HttpBindManager.getInstance().removeJettyHandler( warfile );
+                warfile.destroy();
             }
             finally
             {
-                solo = null;
+                warfile = null;
             }
         }
     }

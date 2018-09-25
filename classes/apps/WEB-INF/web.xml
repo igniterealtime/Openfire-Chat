@@ -5,12 +5,12 @@
          version="3.1">
          
     <servlet>
-        <servlet-name>sms</servlet-name>
-        <servlet-class>org.ifsoft.sms.Servlet</servlet-class>
+        <servlet-name>nexmo</servlet-name>
+        <servlet-class>org.ifsoft.sms.nexmo.Servlet</servlet-class>
     </servlet>
 
     <servlet-mapping>
-        <servlet-name>sms</servlet-name>
+        <servlet-name>nexmo</servlet-name>
         <url-pattern>/sms</url-pattern>
     </servlet-mapping>       
 </web-app>

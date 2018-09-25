@@ -1511,7 +1511,7 @@
                 }
             }
         },
-        "/restapi/v1/chat/{streamid}/messages":{
+        "/restapi/v1/chat/{username}/messages":{
             "get":{
                 "tags": [
                     "Chat"
@@ -1527,7 +1527,7 @@
                 "parameters":[
                     {
                         "type":"string",
-                        "name":"streamid",
+                        "name":"username",
                         "in":"path",
                         "required":true
                     },
@@ -1566,7 +1566,15 @@
                         "name":"to",
                         "in":"query",
                         "required":false
-                    }
+                    },
+                    {
+                        "name":"body",
+                        "in":"body",
+                        "required":false,
+                        "schema":{
+                            "type":"string"
+                        }
+                    }                    
                 ],
                 "responses":{
                     "200":{
@@ -3439,13 +3447,13 @@
                 }
             }
         },
-        "/restapi/v1/meet/sms/{destination}/{message}":{
+        "/restapi/v1/meet/sms/{source}/{destination}":{
             "post":{
-        "tags": [
-            "Meet"
-        ], 
-        "summary": "Send an sms Notification to destination",
-        "description": "",              
+                "tags": [
+                    "Meet"
+                ], 
+                "summary": "Send an sms Notification from a source to a destination",
+                "description": "Don't include the + sign. Example: 447825688467",              
                 "consumes":[
                 ],
                 "produces":[
@@ -3453,15 +3461,23 @@
                 "parameters":[
                     {
                         "type":"string",
-                        "name":"destination",
+                        "name":"source",
                         "in":"path",
                         "required":true
                     },
                     {
                         "type":"string",
-                        "name":"message",
+                        "name":"destination",
                         "in":"path",
                         "required":true
+                    },
+                    {
+                        "name":"body",
+                        "in":"body",
+                        "required":true,
+                        "schema":{
+                            "type":"string"
+                        }
                     }
                 ],
                 "responses":{

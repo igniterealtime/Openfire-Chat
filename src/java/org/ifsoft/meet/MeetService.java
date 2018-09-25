@@ -147,7 +147,7 @@ public class MeetService {
         String callId = "";
 
         try {
-        	callId = meetController.makeCall(username, destination);
+            callId = meetController.makeCall(username, destination);
 
         } catch (Exception e) {
             Log.error("makeCall", e);
@@ -176,8 +176,8 @@ public class MeetService {
     public Response addUserToAudiobridge(@PathParam("audiobridge") String audiobridge, @PathParam("username") String username) throws ServiceException
     {
         try {
-			meetController.addUserToAudiobridge(username, audiobridge);
-			return Response.status(Response.Status.OK).build();
+            meetController.addUserToAudiobridge(username, audiobridge);
+            return Response.status(Response.Status.OK).build();
 
         } catch (Exception e) {
             Log.error("addUserToAudiobridge", e);
@@ -190,8 +190,8 @@ public class MeetService {
     public Response removeUserFromAudiobridge(@PathParam("audiobridge") String audiobridge, @PathParam("username") String username) throws ServiceException
     {
         try {
-			meetController.removeUserFromAudiobridge(username, audiobridge);
-			return Response.status(Response.Status.OK).build();
+            meetController.removeUserFromAudiobridge(username, audiobridge);
+            return Response.status(Response.Status.OK).build();
 
         } catch (Exception e) {
             Log.error("leaveAudiobridge", e);
@@ -209,16 +209,41 @@ public class MeetService {
     @Path("/invite/{username}/{jid}")
     public Response inviteToJvb(@PathParam("username") String username, @PathParam("jid") String jid) throws ServiceException
     {
-		try {
+        try {
 
-			if (meetController.inviteToJvb(username, jid))
-			{
-				return Response.status(Response.Status.OK).build();
-			}
+            if (meetController.inviteToJvb(username, jid))
+            {
+                return Response.status(Response.Status.OK).build();
+            }
 
-		} catch (Exception e) {
-			Log.error("inviteToJvb", e);
-		}
-		return Response.status(Response.Status.BAD_REQUEST).build();
+        } catch (Exception e) {
+            Log.error("inviteToJvb", e);
+        }
+        return Response.status(Response.Status.BAD_REQUEST).build();
     }
+
+    //-------------------------------------------------------
+    //
+    //  SMS
+    //
+    //-------------------------------------------------------
+
+    @POST
+    @Path("/sms/{source}/{destination}")
+    public Response sendSms(@PathParam("source") String source, @PathParam("destination") String destination, String body) throws ServiceException
+    {
+        try {
+
+            if ("nexmo".equals(JiveGlobals.getProperty("ofchat.sms.provider", "nexmo")))
+            {
+                org.ifsoft.sms.nexmo.Servlet.smsOutgoing(source, destination, body);
+                return Response.status(Response.Status.OK).build();
+            }
+
+        } catch (Exception e) {
+            Log.error("sendSms", e);
+        }
+        return Response.status(Response.Status.BAD_REQUEST).build();
+    }
+
 }

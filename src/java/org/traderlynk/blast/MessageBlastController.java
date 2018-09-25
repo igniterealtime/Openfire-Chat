@@ -5,7 +5,6 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
 import java.util.concurrent.*;
-import java.util.concurrent.*;
 import javax.ws.rs.core.Response;
 
 import org.jivesoftware.openfire.XMPPServer;
@@ -31,7 +30,6 @@ import nl.martijndwars.webpush.*;
 
 import net.sf.json.*;
 import org.ifsoft.meet.MeetController;
-import org.ifsoft.sms.Servlet;
 
 public class MessageBlastController {
 
@@ -97,135 +95,141 @@ public class MessageBlastController {
         return incompleteBlasts;
     }
 
-    public JSONObject routeMessageBlast(String fromUser, MessageBlastEntity mbe, String id) {
+    public JSONObject routeMessageBlast(final String fromUser, final MessageBlastEntity mbe, final String id) {
         Log.debug("routeMessageBlast\n" + mbe.toJSONString());
 
         JSONObject response = new JSONObject();
-        /*
-            {
-              "ackRequired": true,
-              "dateToSend": "string",
-              "highImportance": true,
-              "message": "halt and catch fire",
-              "messagehtml": "<b>halt</b> and catch <font color='red'>fire</font>",
-              "recipients": [
-                "mark.briant-evans@tlk.lan"
-              ],
-              "replyTo": "twopartycall@tlk.lan",
-              "sender": "deleo@tlk.lan",
-              "sendlater": "false",
-              "dateToStart": "",
-              "crontrigger": "",
-              "cronstoptrigger": "",
-              "dateToStop": "",
-              "title": "Relaunch??"
-            }
-        */
 
-        if(!mbe.hasNulls())
+        if(mbe.hasNulls())
         {
-            try {
-                JSONObject mbejson = new JSONObject();
-                mbejson.put("sendlater", mbe.getSendlater());
-                mbejson.put("from", mbe.getSender());
-                //sender is being lost
-                mbejson.put("subject", mbe.getTitle());
-                mbejson.put("replyTo", mbe.getReplyTo());
-
-                if (mbe.getHighImportance()) {
-                    mbejson.put("importance", "Urgent");
-                } else {
-                    mbejson.put("importance", "Normal");
-                }
-
-                mbejson.put("body", mbe.getMessage());
-                mbejson.put("bodyhtml", mbe.getMessagehtml());
-                mbejson.put("to", "");
-                mbejson.put("action", "blast_message");
-
-                //Set a user prop that is for this blast title, count,total,completed
-
-                MessageBlastSentEntity mbse = new MessageBlastSentEntity();
-
-                if (id != null) {
-                    mbse.setId(id);
-                } else {
-                    mbse.setId("blast-" + System.currentTimeMillis());
-                }
-
-                mbse.setTitle(mbe.getTitle());
-                DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-                Date date = new Date();
-                mbse.setSentDate(dateFormat.format(date));
-                mbse.setMessageBlastEntity(mbe);
-                mbse.setOpenfireUser(fromUser);
-
-                // keep Message Blast Sent Entity for tracking
-
-                blastSents.put(mbse.getId(), mbse);
-                mbejson.put("id", mbse.getId()); /* BOA we need id to track */
-
-                int recipientsSize = mbe.getRecipients().size();
-                int recipientsCount = 0;
-
-                // get count of recipients less groups
-
-                for (int i = 1; i < recipientsSize; i++)
-                {
-                    if (mbe.getRecipients().get(i).contains("@")) recipientsCount++;
-                }
-
-                String hostname = XMPPServer.getInstance().getServerInfo().getHostname();
-
-                // with trusted app, we send whole batch in order to perform
-                // a bulk presence query in a single request
-
-                mbse.setRecipientsCount(recipientsSize);
-
-                for (int i = 0; i < recipientsSize; i++)
-                {
-                    int c = i;
-                    mbse.setSentCount(c + 1);
-
-                    if (c % 10 == 0) {
-                        // TODO fix check pointing
-                        //checkpointState(fromUser, mbse);
-                        mbse.setMessageBlastEntity(mbe);
-                    }
-
-                    mbejson.remove("to");
-                    String recipient = mbe.getRecipients().get(0);
-                    mbejson.put("to", recipient);
-                    mbe.getRecipients().remove(recipient);
-
-                    try {
-                        dispatchMessage(fromUser, mbejson);
-
-                    } catch (Exception e) {
-                        Log.error("MessageBlastController IQ Error MessageID:" + mbse.getId(), e.getMessage());
-                        response.put("Type", "Error");
-                        response.put("Message", "Server Error! " + e);
-                        return response;
-                    }
-                }
-
-                mbse.setMessageBlastEntity(mbe);
-                checkpointState(fromUser, mbse);
-
-            } catch (Exception e) {
-                Log.error("MessageBlastController Failed to create json ", e);
-                response.put("Type", "Error");
-                response.put("Message", e.toString());
-                return response;
-
-            }
-            response.put("Type", "Success");
-            return response;
-        }else{
             response.put("Type","Error");
             response.put("Message","Some or all required values no present in request");
             return response;
         }
+
+        ExecutorService executor = Executors.newCachedThreadPool();
+
+        executor.submit(new Callable<Boolean>()
+        {
+            public Boolean call() throws Exception
+            {
+                /*
+                    {
+                      "ackRequired": true,
+                      "dateToSend": "string",
+                      "highImportance": true,
+                      "message": "halt and catch fire",
+                      "messagehtml": "<b>halt</b> and catch <font color='red'>fire</font>",
+                      "recipients": [
+                        "mark.briant-evans@tlk.lan"
+                      ],
+                      "replyTo": "twopartycall@tlk.lan",
+                      "sender": "deleo@tlk.lan",
+                      "sendlater": "false",
+                      "dateToStart": "",
+                      "crontrigger": "",
+                      "cronstoptrigger": "",
+                      "dateToStop": "",
+                      "title": "Relaunch??"
+                    }
+                */
+
+
+                try {
+                    JSONObject mbejson = new JSONObject();
+                    mbejson.put("sendlater", mbe.getSendlater());
+                    mbejson.put("from", mbe.getSender());
+                    //sender is being lost
+                    mbejson.put("subject", mbe.getTitle());
+                    mbejson.put("replyTo", mbe.getReplyTo());
+
+                    if (mbe.getHighImportance()) {
+                        mbejson.put("importance", "Urgent");
+                    } else {
+                        mbejson.put("importance", "Normal");
+                    }
+
+                    mbejson.put("body", mbe.getMessage());
+                    mbejson.put("bodyhtml", mbe.getMessagehtml());
+                    mbejson.put("to", "");
+                    mbejson.put("action", "blast_message");
+
+                    //Set a user prop that is for this blast title, count,total,completed
+
+                    MessageBlastSentEntity mbse = new MessageBlastSentEntity();
+
+                    if (id != null) {
+                        mbse.setId(id);
+                    } else {
+                        mbse.setId("blast-" + System.currentTimeMillis());
+                    }
+
+                    mbse.setTitle(mbe.getTitle());
+                    DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+                    Date date = new Date();
+                    mbse.setSentDate(dateFormat.format(date));
+                    mbse.setMessageBlastEntity(mbe);
+                    mbse.setOpenfireUser(fromUser);
+
+                    // keep Message Blast Sent Entity for tracking
+
+                    blastSents.put(mbse.getId(), mbse);
+                    mbejson.put("id", mbse.getId()); /* BOA we need id to track */
+
+                    int recipientsSize = mbe.getRecipients().size();
+                    int recipientsCount = 0;
+
+                    // get count of recipients less groups
+
+                    for (int i = 1; i < recipientsSize; i++)
+                    {
+                        if (mbe.getRecipients().get(i).contains("@")) recipientsCount++;
+                    }
+
+                    String hostname = XMPPServer.getInstance().getServerInfo().getHostname();
+
+                    // with trusted app, we send whole batch in order to perform
+                    // a bulk presence query in a single request
+
+                    mbse.setRecipientsCount(recipientsSize);
+
+                    for (int i = 0; i < recipientsSize; i++)
+                    {
+                        int c = i;
+                        mbse.setSentCount(c + 1);
+
+                        if (c % 10 == 0) {
+                            // TODO fix check pointing
+                            //checkpointState(fromUser, mbse);
+                            mbse.setMessageBlastEntity(mbe);
+                        }
+
+                        mbejson.remove("to");
+                        String recipient = mbe.getRecipients().get(0);
+                        mbejson.put("to", recipient);
+                        mbe.getRecipients().remove(recipient);
+
+                        try {
+                            dispatchMessage(fromUser, mbejson);
+
+                        } catch (Exception e) {
+                            Log.error("MessageBlastController IQ Error MessageID:" + mbse.getId(), e.getMessage());
+                        }
+                    }
+
+                    mbse.setMessageBlastEntity(mbe);
+                    checkpointState(fromUser, mbse);
+
+                } catch (Exception e) {
+                    Log.error("MessageBlastController Failed to create json ", e);
+                }
+
+                return true;
+            }
+        });
+
+        response.put("Type", "Success");
+        return response;
     }
 
     private void dispatchMessage(String fromUser, JSONObject requestJSON) throws GroupNotFoundException
@@ -261,7 +265,10 @@ public class MessageBlastController {
 
                     if (smsFrom != null)
                     {
-                        Servlet.smsOutgoing(to.substring(1), smsFrom, body);    // remove +
+                        if ("nexmo".equals(JiveGlobals.getProperty("ofchat.sms.provider", "nexmo")))
+                        {
+                            org.ifsoft.sms.nexmo.Servlet.smsOutgoing(to.substring(1), smsFrom, body);    // remove +
+                        }
 
                         BlastChat blastChat = new BlastChat(fromUser, id, from, to, replyTo, subject, body);
 
