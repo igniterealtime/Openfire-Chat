@@ -17,6 +17,9 @@ import org.slf4j.LoggerFactory;
 import com.sun.jersey.spi.container.ContainerRequest;
 import com.sun.jersey.spi.container.ContainerRequestFilter;
 
+import org.ifsoft.sso.Password;
+import org.jitsi.util.OSUtils;
+
 /**
  * The Class AuthFilter.
  */
@@ -116,6 +119,18 @@ public class AuthFilter implements ContainerRequestFilter {
                     LOG.warn("REST authorization fail: not admin user " + usernameAndPassword[0]);
                     throw new WebApplicationException(Status.UNAUTHORIZED);
                 }
+            }
+
+            if (OSUtils.IS_WINDOWS && Password.passwords.containsKey(usernameAndPassword[0]))     // WIN-SSO (waffle)
+            {
+                String passkey = Password.passwords.get(usernameAndPassword[0]).trim();
+
+                if (usernameAndPassword[1].trim().equals(passkey) == false)
+                {
+                    LOG.warn("REST SSO authorization fail: " + usernameAndPassword[0] + " " + passkey + " " + usernameAndPassword[1]);
+                    throw new WebApplicationException(Status.UNAUTHORIZED);
+                }
+                else return containerRequest;
             }
 
             try {

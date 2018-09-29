@@ -16,6 +16,7 @@ import javax.ws.rs.DefaultValue;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.xml.bind.DatatypeConverter;
 
 import org.jivesoftware.openfire.plugin.rest.exceptions.ServiceException;
 import org.jivesoftware.openfire.plugin.rest.exceptions.ExceptionType;
@@ -30,12 +31,14 @@ import org.jivesoftware.openfire.user.*;
 import org.jivesoftware.database.DbConnectionManager;
 
 import org.jivesoftware.smack.OpenfireConnection;
+import org.broadbear.link.preview.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.sf.json.*;
 import com.j256.twofactorauth.TimeBasedOneTimePasswordUtil;
+
 
 @Path("restapi/v1/ask")
 public class AskService {
@@ -48,14 +51,20 @@ public class AskService {
 
     }
 
-/*
-    {
-      "emailAddress": "patient@hospital.com",
-      "userID": "patient",
-      "question": "What is the meaning of life",
-      "workgroup": "diabetes"
-    }
-*/
+    /*
+        {
+          "emailAddress": "patient@hospital.com",
+          "userID": "patient",
+          "question": "What is the meaning of life",
+          "workgroup": "diabetes"
+        }
+    */
+
+    //-------------------------------------------------------
+    //
+    //  ask
+    //
+    //-------------------------------------------------------
 
     @POST
     @Path("/")
@@ -84,6 +93,29 @@ public class AskService {
     {
         try {
             String response = RESTServicePlugin.getInstance().createWorkgroup(workgroup.getName(), workgroup.getDescription(), workgroup.getMembers().split(","));
+
+            if (response != null)
+            {
+                throw new ServiceException(response, response, ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+            }
+
+        } catch (Exception e) {
+            throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+        }
+
+        return Response.status(Response.Status.OK).build();
+    }
+    @PUT
+    @Path("/{workgroup}")
+    @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
+    public Response updateWorgroup(@PathParam("workgroup") String workgroup, String members) throws ServiceException
+    {
+        try {
+            String[] memberList = new String[]{};
+            if (members.contains(",")) memberList = members.split(",");
+            if (members.contains(" ")) memberList = members.split(" ");
+
+            String response = RESTServicePlugin.getInstance().updateWorkgroup(workgroup, memberList);
 
             if (response != null)
             {
@@ -191,6 +223,12 @@ public class AskService {
         return Response.status(Response.Status.OK).build();
     }
 
+    //-------------------------------------------------------
+    //
+    //  upload
+    //
+    //-------------------------------------------------------
+
     @GET
     @Path("/upload/{userId}/{fileName}/{fileSize}")
     public String uploadRequest(@PathParam("userId") String userId, @PathParam("fileName") String fileName, @PathParam("fileSize") String fileSize) throws ServiceException
@@ -209,6 +247,44 @@ public class AskService {
             throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
         }
     }
+
+    //-------------------------------------------------------
+    //
+    //  preview link (url)
+    //
+    //-------------------------------------------------------
+
+    @GET
+    @Path("/previewlink/{quality}/{url}")
+    public String previewLink(@PathParam("quality") String quality, @PathParam("url") String url) throws ServiceException
+    {
+        Log.info("previewLink " + url + " " + quality);
+
+        try {
+            JSONObject jsonObject = new JSONObject();
+            SourceContent sourceContent = TextCrawler.scrape(new String(DatatypeConverter.parseBase64Binary(url)), Integer.parseInt(quality));
+
+            if (sourceContent == null)
+            {
+                throw new ServiceException("Exception", "bad url", ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+            }
+
+            if (sourceContent.getImages() != null)      jsonObject.put("image", sourceContent.getImages().get(0));
+            if (sourceContent.getDescription() != null) jsonObject.put("descriptionShort", sourceContent.getDescription());
+            if (sourceContent.getTitle()!=null)         jsonObject.put("title", sourceContent.getTitle());
+
+            return jsonObject.toString();
+
+        } catch (Exception e) {
+            throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+        }
+    }
+
+    //-------------------------------------------------------
+    //
+    //  uport
+    //
+    //-------------------------------------------------------
 
     @GET
     @Path("/uport/{appId}/{clientId}")

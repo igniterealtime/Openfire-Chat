@@ -256,6 +256,44 @@
                 }
             }            
         },
+        "/restapi/v1/ask/previewlink/{quality}/{url}":{
+            "get":{
+                "tags": [
+                    "Ask"
+                ],              
+                "summary": "Fetch a preview to a web page link",
+                "description": "Provide the link URL and image quality (numeric)",              
+                "consumes":[
+                ],
+                "produces":[
+                    "text/plain"
+                ],
+                "parameters":[
+                    {
+                        "type":"string",
+                        "name":"quality",
+                        "in":"path",
+                        "required":true
+                    },
+                    {
+                        "type":"string",
+                        "name":"url",
+                        "in":"path",
+                        "required":true
+                    }                  
+                ],
+                "responses":{
+                    "200":{
+                        "description":"OK",
+                        "headers":{
+                        },
+                        "schema":{
+                            "type":"string"
+                        }
+                    }
+                }
+            }
+        },        
         "/restapi/v1/ask/upload/{userId}/{fileName}/{fileSize}":{
             "get":{
                 "tags": [
@@ -488,7 +526,41 @@
                 }
             }
         },
-        "/restapi/v1/ask/{workgroup}":{        
+        "/restapi/v1/ask/{workgroup}":{ 
+            "put":{
+                "tags": [
+                    "Ask"
+                ],             
+                "summary": "Update a workgroup",
+                "description": "Use this endpoint to update a fastpath workgroup with new memebers",                
+                "consumes":[
+                ],
+                "produces":[
+                ],
+                "parameters":[
+                    {
+                        "type":"string",
+                        "name":"workgroup",
+                        "in":"path",
+                        "required":true
+                    },
+                    {
+                        "name":"body",
+                        "in":"body",
+                        "required":true,
+                        "schema":{
+                            "type":"string"
+                        }
+                    }                    
+                ],
+                "responses":{
+                    "200":{
+                        "description":"OK",
+                        "headers":{
+                        }
+                    }
+                }
+            },        
             "delete":{
                 "tags": [
                     "Ask"
@@ -514,7 +586,7 @@
                         }
                     }
                 }
-            }   
+            }           
         },            
         "/restapi/v1/bookmarks":{
             "post":{
@@ -1199,7 +1271,7 @@
                 }
             }
         },
-        "/restapi/v1/chat/{streamid}/assists/{workgroup}":{
+        "/restapi/v1/chat/{streamid}/assists/queues":{
             "get":{
                 "tags": [
                     "Chat"
@@ -1218,12 +1290,6 @@
                         "name":"streamid",
                         "in":"path",
                         "required":true
-                    },
-                    {
-                        "type":"string",
-                        "name":"workgroup",
-                        "in":"path",
-                        "required":true
                     }
                 ],
                 "responses":{
@@ -1236,7 +1302,9 @@
                         }
                     }
                 }
-            },
+            }
+        },
+        "/restapi/v1/chat/{streamid}/assists/{workgroup}":{      
             "post":{
                 "tags": [
                     "Chat"

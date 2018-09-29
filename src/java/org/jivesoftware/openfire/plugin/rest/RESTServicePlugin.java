@@ -95,6 +95,7 @@ import org.ifsoft.meet.*;
 import org.xmpp.packet.*;
 import org.dom4j.Element;
 import net.sf.json.*;
+import org.jitsi.util.OSUtils;
 
 import org.traderlynk.blast.MessageBlastService;
 import org.jivesoftware.openfire.sip.sipaccount.SipAccount;
@@ -140,9 +141,9 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
     private HashMap<String, ServletContextHandler> proxyContexts;
 
     private WebAppContext context3;
-    private WebAppContext context4;
     private WebAppContext context5;
     private WebAppContext context6;
+    private WebAppContext context7;
     private WebAppContext warfile;
     public File pluginDirectory;
 
@@ -264,27 +265,6 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         context3.setWelcomeFiles(new String[]{"index.html"});
         HttpBindManager.getInstance().addJettyHandler(context3);
 
-
-        Log.info("Initialize Meet WebService ");
-
-        context4 = new WebAppContext(null, pluginDirectory.getPath() + "/classes/jitsi-meet", "/meet");
-        context4.setClassLoader(this.getClass().getClassLoader());
-
-        if ( JiveGlobals.getBooleanProperty("ofmeet.security.enabled", true ) )
-        {
-            Log.info("Initialize Meet WebService security");
-            SecurityHandler securityHandler4 = basicAuth("ofchat");
-            if (securityHandler4 != null) context4.setSecurityHandler(securityHandler4);
-        }
-
-        final List<ContainerInitializer> initializers4 = new ArrayList<>();
-        initializers4.add(new ContainerInitializer(new JettyJasperInitializer(), null));
-        context4.setAttribute("org.eclipse.jetty.containerInitializers", initializers4);
-        context4.setAttribute(InstanceManager.class.getName(), new SimpleInstanceManager());
-        context4.setWelcomeFiles(new String[]{"index.jsp"});
-        context4.addFilter( JitsiMeetRedirectFilter.class, "/*", EnumSet.of( DispatcherType.REQUEST ) );
-        HttpBindManager.getInstance().addJettyHandler(context4);
-
         Log.info("Initialize Dashboard WebService ");
 
         context5 = new WebAppContext(null, pluginDirectory.getPath() + "/classes/dashboard", "/dashboard");
@@ -316,6 +296,29 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         context6.setWelcomeFiles(new String[]{"index.jsp"});
         HttpBindManager.getInstance().addJettyHandler(context6);
 
+        if (OSUtils.IS_WINDOWS)
+        {
+            Log.info("Initialize Windows SSO WebService ");
+
+            context7 = new WebAppContext(null, pluginDirectory.getPath() + "/classes/win-sso", "/sso");
+            context7.setClassLoader(this.getClass().getClassLoader());
+
+            final List<ContainerInitializer> initializers7 = new ArrayList<>();
+            initializers7.add(new ContainerInitializer(new JettyJasperInitializer(), null));
+            context7.setAttribute("org.eclipse.jetty.containerInitializers", initializers7);
+            context7.setAttribute(InstanceManager.class.getName(), new SimpleInstanceManager());
+            context7.setWelcomeFiles(new String[]{"index.jsp"});
+
+            waffle.servlet.NegotiateSecurityFilter securityFilter = new waffle.servlet.NegotiateSecurityFilter();
+            FilterHolder filterHolder = new FilterHolder();
+            filterHolder.setFilter(securityFilter);
+            EnumSet<DispatcherType> enums = EnumSet.of(DispatcherType.REQUEST);
+            enums.add(DispatcherType.REQUEST);
+            context7.addFilter(filterHolder, "/*", enums);
+
+            HttpBindManager.getInstance().addJettyHandler(context7);
+        }
+
         proxyContexts = new HashMap<String, ServletContextHandler>();
 
         List<String> properties = JiveGlobals.getPropertyNames();
@@ -346,11 +349,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
         Log.info("Initialize preffered property default values");
         JiveGlobals.setProperty("route.all-resources", "true");     // send chat messages to all resources
-        JiveGlobals.setProperty("ofmeet.buttons.implemented", "microphone, camera, desktop, invite, fullscreen, fodeviceselection, hangup, profile, dialout, addtocall, contacts, info, chat, recording, sharedvideo, settings, raisehand, videoquality, filmstrip");
-        JiveGlobals.setProperty("ofmeet.buttons.enabled", "microphone, camera, desktop, invite, fullscreen, fodeviceselection, hangup, profile, dialout, addtocall, contacts, info, chat, recording, sharedvideo, settings, raisehand, videoquality, filmstrip");
-        JiveGlobals.setProperty("org.jitsi.videobridge.ofmeet.inviteOptions", "invite, dialout, addtocall");
-        JiveGlobals.setProperty("org.jitsi.videobridge.ofmeet.chrome.extension.id", "fmgnibblgekonbgjhkjicekgacgoagmm");
-        JiveGlobals.setProperty("org.jitsi.videobridge.ofmeet.min.chrome.ext.ver", "0.0.1");
+
         JiveGlobals.setProperty("uport.clientid.etherlynk.2ofdeAidaU2mjJ5X8r1CgH2RdPb9qKVS9pc", "1b561603d69de7091fa9cee632741f7f313b4dd39bc328d38dc514bbb5f184e3");
         JiveGlobals.setProperty("uport.clientid.pade.2p1psGHt9J5NBdPDQejSVhpsECXLxLaVQSo", "46445273c02e4c0594ef6a441ecbcd327f0f78ba58b3139e027f0b23c199ea5f");
 
@@ -475,9 +474,10 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         HttpBindManager.getInstance().removeJettyHandler(context);
         HttpBindManager.getInstance().removeJettyHandler(context2);
         HttpBindManager.getInstance().removeJettyHandler(context3);
-        HttpBindManager.getInstance().removeJettyHandler(context4);
         HttpBindManager.getInstance().removeJettyHandler(context5);
         HttpBindManager.getInstance().removeJettyHandler(context6);
+
+        if (OSUtils.IS_WINDOWS) HttpBindManager.getInstance().removeJettyHandler(context7);
 
         for (String key : proxyContexts.keySet())
         {
@@ -1409,34 +1409,81 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         {
             return "admin account unavailable";
         }
-
-        String id = workgroup + "-" + System.currentTimeMillis();
         String response = null;
 
-        IQ iq = new IQ(IQ.Type.set);
-        iq.setFrom("admin@" + DOMAIN);
-        iq.setTo("workgroup." + DOMAIN);
-        iq.setID(id);
+        try {
+            String id = workgroup + "-" + System.currentTimeMillis();
 
-        Element command = iq.setChildElement("command", "http://jabber.org/protocol/commands");
-        command.addAttribute("node", "http://jabber.org/protocol/admin#add-workgroup");
+            IQ iq = new IQ(IQ.Type.set);
+            iq.setFrom("admin@" + DOMAIN);
+            iq.setTo("workgroup." + DOMAIN);
+            iq.setID(id);
 
-        Element x = command.addElement("x", "jabber:x:data");
-        x.addAttribute("type", "submit");
-        x.addElement("field").addAttribute("var", "FORM_TYPE").addElement("value").setText("http://jabber.org/protocol/admin");
-        x.addElement("field").addAttribute("var", "name").addElement("value").setText(workgroup);
+            Element command = iq.setChildElement("command", "http://jabber.org/protocol/commands");
+            command.addAttribute("node", "http://jabber.org/protocol/admin#add-workgroup");
 
-        Element membersEl = x.addElement("field").addAttribute("var", "members");
+            Element x = command.addElement("x", "jabber:x:data");
+            x.addAttribute("type", "submit");
+            x.addElement("field").addAttribute("var", "FORM_TYPE").addElement("value").setText("http://jabber.org/protocol/admin");
+            x.addElement("field").addAttribute("var", "name").addElement("value").setText(workgroup);
 
-        for (int i=0; i<members.length; i++)
-        {
-            membersEl.addElement("value").setText(members[i].trim());
+            Element membersEl = x.addElement("field").addAttribute("var", "members");
+
+            for (int i=0; i<members.length; i++)
+            {
+                membersEl.addElement("value").setText(members[i].trim());
+            }
+
+            x.addElement("field").addAttribute("var", "description").addElement("value").setText(description);
+
+            addhocCommands.put(id, iq);
+            adminConnection.getRouter().route(iq);
+
+        } catch (Exception e) {
+            response = e.toString();
+            Log.error("createWorkgroup", e);
         }
+        return response;
+    }
 
-        x.addElement("field").addAttribute("var", "description").addElement("value").setText(description);
+    public String updateWorkgroup(String workgroup, String[] members)
+    {
+        if (adminConnection == null)
+        {
+            return "admin account unavailable";
+        }
+        String response = null;
 
-        addhocCommands.put(id, iq);
-        adminConnection.getRouter().route(iq);
+        try {
+            String id = workgroup + "-" + System.currentTimeMillis();
+
+            IQ iq = new IQ(IQ.Type.set);
+            iq.setFrom("admin@" + DOMAIN);
+            iq.setTo("workgroup." + DOMAIN);
+            iq.setID(id);
+
+            Element command = iq.setChildElement("command", "http://jabber.org/protocol/commands");
+            command.addAttribute("node", "http://jabber.org/protocol/admin#update-workgroup");
+
+            Element x = command.addElement("x", "jabber:x:data");
+            x.addAttribute("type", "submit");
+            x.addElement("field").addAttribute("var", "FORM_TYPE").addElement("value").setText("http://jabber.org/protocol/admin");
+            x.addElement("field").addAttribute("var", "workgroup").addElement("value").setText(workgroup + "@workgroup." + DOMAIN);
+
+            Element membersEl = x.addElement("field").addAttribute("var", "members");
+
+            for (int i=0; i<members.length; i++)
+            {
+                membersEl.addElement("value").setText(members[i].trim());
+            }
+
+            addhocCommands.put(id, iq);
+            adminConnection.getRouter().route(iq);
+
+        } catch (Exception e) {
+            response = e.toString();
+            Log.error("updateWorkgroup", e);
+        }
         return response;
     }
 
@@ -1447,26 +1494,34 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             return "admin account unavailable";
         }
 
-        String id = workgroup + "-" + System.currentTimeMillis();
         String response = null;
 
-        IQ iq = new IQ(IQ.Type.set);
-        iq.setFrom("admin@" + DOMAIN);
-        iq.setTo("workgroup." + DOMAIN);
-        iq.setID(id);
+        try {
+            String id = workgroup + "-" + System.currentTimeMillis();
 
-        Element command = iq.setChildElement("command", "http://jabber.org/protocol/commands");
-        command.addAttribute("node", "http://jabber.org/protocol/admin#delete-workgroup");
+            IQ iq = new IQ(IQ.Type.set);
+            iq.setFrom("admin@" + DOMAIN);
+            iq.setTo("workgroup." + DOMAIN);
+            iq.setID(id);
 
-        Element x = command.addElement("x", "jabber:x:data");
-        x.addAttribute("type", "submit");
-        x.addElement("field").addAttribute("var", "FORM_TYPE").addElement("value").setText("http://jabber.org/protocol/admin");
-        x.addElement("field").addAttribute("var", "workgroup").addElement("value").setText(workgroup + "@workgroup." + DOMAIN);
+            Element command = iq.setChildElement("command", "http://jabber.org/protocol/commands");
+            command.addAttribute("node", "http://jabber.org/protocol/admin#delete-workgroup");
 
-        addhocCommands.put(id, iq);
-        adminConnection.getRouter().route(iq);
+            Element x = command.addElement("x", "jabber:x:data");
+            x.addAttribute("type", "submit");
+            x.addElement("field").addAttribute("var", "FORM_TYPE").addElement("value").setText("http://jabber.org/protocol/admin");
+            x.addElement("field").addAttribute("var", "workgroup").addElement("value").setText(workgroup + "@workgroup." + DOMAIN);
+
+            addhocCommands.put(id, iq);
+            adminConnection.getRouter().route(iq);
+
+        } catch (Exception e) {
+            response = e.toString();
+            Log.error("deleteWorkgroup", e);
+        }
         return response;
     }
+
 
     public class AdminConnection extends VirtualConnection
     {

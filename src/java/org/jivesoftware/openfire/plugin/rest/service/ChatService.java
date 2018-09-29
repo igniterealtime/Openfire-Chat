@@ -70,6 +70,8 @@ import org.jivesoftware.smack.OpenfireConnection;
 import com.j256.twofactorauth.TimeBasedOneTimePasswordUtil;
 import de.mxro.process.*;
 
+import org.ifsoft.sso.Password;
+import org.jitsi.util.OSUtils;
 
 @Path("restapi/v1/chat")
 public class ChatService {
@@ -436,7 +438,7 @@ public class ChatService {
 
                     if (usernameAndPassword != null && usernameAndPassword.length == 2)
                     {
-                        AuthFactory.authenticate( usernameAndPassword[0], usernameAndPassword[1] );
+                        authenticate( usernameAndPassword[0], usernameAndPassword[1] );
 
                     } else {
                         throw new ServiceException("Exception", "not authorized", ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
@@ -444,7 +446,7 @@ public class ChatService {
                  }  // else ok
 
             } else {
-                AuthFactory.authenticate( username, password );
+                authenticate( username, password );
             }
 
             ArchiveSearch search = new ArchiveSearch();
@@ -1083,5 +1085,22 @@ public class ChatService {
             Log.error("checkCertificatesFolder", e);
         }
         return null;
+    }
+
+    private void authenticate(String username, String password) throws Exception
+    {
+        Log.info("authenticate " + username + " " + password + " " + Password.passwords.get(username));
+
+        if (OSUtils.IS_WINDOWS && Password.passwords.containsKey(username))     // WIN-SSO (waffle)
+        {
+            String passkey = Password.passwords.get(username).trim();
+
+            if (password.trim().equals(passkey) == false)
+            {
+                throw new ServiceException("Exception", "not authorized", ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+            }
+            return;
+        }
+        else AuthFactory.authenticate( username, password );
     }
 }

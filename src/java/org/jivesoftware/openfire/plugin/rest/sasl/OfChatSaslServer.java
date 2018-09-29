@@ -14,6 +14,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.StringTokenizer;
 
 import com.j256.twofactorauth.TimeBasedOneTimePasswordUtil;
+import org.jitsi.util.OSUtils;
+import org.ifsoft.sso.Password;
 
 /**
  * A SaslServer implementation that is specific to OfChat.
@@ -56,7 +58,9 @@ public class OfChatSaslServer implements SaslServer
         }
 
         final String username = tokens.nextToken();
-        final String totp = tokens.nextToken();
+        final String totp = tokens.nextToken().trim();
+
+        Log.debug("OFCHAT authentication " + username + ":" + totp);
 
         try {
             User user = XMPPServer.getInstance().getUserManager().getUser(username);
@@ -70,29 +74,45 @@ public class OfChatSaslServer implements SaslServer
 
                 if (!totp.equals(code))
                 {
-                    Log.warn("code=" + code + ", totp=" + totp);
+                    Log.debug("code=" + code + ", totp=" + totp);
 
                     // exception to be fixed when single Pade xmpp session is implemented
                     // allow old TOTP code if existing session used it.
 
                     if (SessionManager.getInstance().getSessions(username).size() == 0 || passcode == null || !totp.equals(passcode))
                     {
-                       throw new SaslException("two-factor authentication (2fa) failure");
+                       throw new SaslException("TOTP authentication failure");
                     }
                 }
 
-                Log.info( "Authentication successful for user " + username + ", code=" + code + ", totp=" + totp);
+                Log.debug( "Authentication successful for user " + username + ", code=" + code + ", totp=" + totp);
+                user.getProperties().put("ofchat.totp.passcode", totp);
 
             } else {
-                throw new SaslException("two-factor authentication (2fa) failure");
+
+                if (OSUtils.IS_WINDOWS && Password.passwords.containsKey(username))     // SSO
+                {
+                    String passkey = Password.passwords.get(username).trim();
+
+                    Log.debug("OFCHAT winsso authentication " + totp + " " + passkey);
+
+                    if (!totp.equals(passkey))
+                    {
+                       throw new SaslException("Windows SSO authentication failure");
+                    }
+
+                    // TODO - can I keep this here for convienience?
+                    //Password.passwords.remove(username);
+                }
+                else throw new SaslException("OFCHAT authentication failure");
             }
 
             authorizationID = username;
-            user.getProperties().put("ofchat.totp.passcode", totp);
             return null;
 
         } catch (Exception e) {
-            throw new SaslException("two-factor authentication (2fa) failure - " + e.toString());
+            Log.error("OFCHAT authentication failure", e);
+            throw new SaslException("OFCHAT authentication failure - " + e.toString());
         }
     }
 

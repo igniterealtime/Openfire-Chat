@@ -236,7 +236,7 @@ public class MeetService {
 
             if ("nexmo".equals(JiveGlobals.getProperty("ofchat.sms.provider", "nexmo")))
             {
-                org.ifsoft.sms.nexmo.Servlet.smsOutgoing(source, destination, body);
+                org.ifsoft.sms.nexmo.Servlet.smsOutgoing(destination, source, body);
                 return Response.status(Response.Status.OK).build();
             }
 

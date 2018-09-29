@@ -52,6 +52,7 @@ import org.jivesoftware.smackx.workgroup.*;
 import org.jivesoftware.smackx.workgroup.user.*;
 import org.jivesoftware.smackx.workgroup.agent.*;
 import org.jivesoftware.smackx.workgroup.packet.*;
+import org.jivesoftware.smackx.workgroup.ext.forms.*;
 import org.jivesoftware.smackx.jiveproperties.JivePropertiesManager;
 
 import org.jxmpp.jid.*;
@@ -155,10 +156,20 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
     static {
         ProviderManager.addIQProvider("slot", UploadRequest.NAMESPACE, new UploadRequest.Provider());
+        ProviderManager.addIQProvider("workgroups",     "http://jabber.org/protocol/workgroup", new AgentWorkgroups.Provider());
+        ProviderManager.addIQProvider("agent-info",     "http://jabber.org/protocol/workgroup", new AgentInfo.Provider());
+        ProviderManager.addIQProvider("offer",          "http://jabber.org/protocol/workgroup", new OfferRequestProvider());
+        ProviderManager.addIQProvider("offer-revoke",   "http://jabber.org/protocol/workgroup", new OfferRevokeProvider());
+        ProviderManager.addIQProvider("transcript",     "http://jabber.org/protocol/workgroup", new TranscriptProvider());
+        ProviderManager.addIQProvider("transcripts",    "http://jabber.org/protocol/workgroup", new TranscriptsProvider());
+
+        ProviderManager.addIQProvider(WorkgroupForm.ELEMENT_NAME, WorkgroupForm.NAMESPACE, new WorkgroupForm.InternalProvider());
+
         ProviderManager.addExtensionProvider(SessionID.ELEMENT_NAME, SessionID.NAMESPACE, new SessionID.Provider());
         ProviderManager.addExtensionProvider(QueueUpdate.ELEMENT_NAME, QueueUpdate.NAMESPACE, new QueueUpdate.Provider());
         ProviderManager.addExtensionProvider(QueueOverview.ELEMENT_NAME, QueueOverview.NAMESPACE, new QueueOverview.Provider());
         ProviderManager.addExtensionProvider(QueueDetails.ELEMENT_NAME, QueueDetails.NAMESPACE, new QueueDetails.Provider());
+        ProviderManager.addExtensionProvider(MetaData.ELEMENT_NAME, MetaData.NAMESPACE, new MetaDataProvider());
 
         JivePropertiesManager.setJavaObjectEnabled(false);
     }
@@ -948,7 +959,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
     public boolean acceptOffer(String offerId)
     {
-        if (offerMap.containsKey(offerId) && agentSession.isOnline())
+        if (offerMap.containsKey(offerId) && agentSession != null && agentSession.isOnline())
         {
             Log.debug("acceptOffer " + offerId);
             try {
@@ -965,7 +976,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
     public boolean rejectOffer(String offerId)
     {
-        if (offerMap.containsKey(offerId) && agentSession.isOnline())
+        if (offerMap.containsKey(offerId) && agentSession != null && agentSession.isOnline())
         {
             Log.debug("rejectOffer " + offerId);
 
@@ -1016,17 +1027,17 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
         Collection<String> workgroups = new ArrayList<String>();
 
         try {
-            workgroups = Agent.getWorkgroups(JidCreate.entityBareFrom(service), JidCreate.entityBareFrom(jid), this);
+            workgroups = Agent.getWorkgroups(JidCreate.from(service), JidCreate.entityBareFrom(jid), this);
 
         } catch (Exception e) { // no need to trap error
-
+            Log.error("getWorkgroups", e);
         }
 
         return new WorkgroupEntities(workgroups);
     }
 
-    public AssistQueues getQueues(String service) {
-        Log.debug("getQueues " + service);
+    public AssistQueues getQueues() {
+        Log.debug("getQueues ");
 
         List<AssistQueue> queues = new ArrayList<AssistQueue>();
 
@@ -1054,7 +1065,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
                 }
             }
             catch (Exception e) {
-                Log.error("rejectOffer", e);
+                Log.error("getQueues", e);
             }
         }
 
