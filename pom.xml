@@ -43,49 +43,6 @@
     <build>
         <sourceDirectory>src/java</sourceDirectory>
         <plugins>   
-            <plugin>
-                <groupId>com.googlecode.maven-download-plugin</groupId>
-                <artifactId>download-maven-plugin</artifactId>
-                <version>1.3.0</version>
-                <executions>
-                    <execution>
-                    <id>retrieve-jitsimeet-webclient</id>
-                    <phase>prepare-package</phase>
-                    <goals>
-                        <goal>wget</goal>
-                    </goals>
-                    <configuration>
-                        <url>https://download.jitsi.org/jitsi-meet/src/jitsi-meet-1.0.2862.tar.bz2</url>
-                        <unpack>true</unpack>
-                        <outputDirectory>classes</outputDirectory>
-                    </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <plugin>
-                <artifactId>maven-resources-plugin</artifactId>
-                <version>2.7</version>
-                <executions>
-                <execution>
-                    <id>override-web-files</id>
-                    <phase>prepare-package</phase>
-                    <goals>
-                    <goal>copy-resources</goal>
-                    </goals>
-
-                    <configuration>
-                    <overwrite>true</overwrite>                 
-                    <outputDirectory>classes/jitsi-meet</outputDirectory>
-                    <resources>
-                        <resource>
-                        <directory>src/jitsi-meet</directory>
-                        </resource>
-                    </resources>
-                    </configuration>
-                </execution>
-               </executions>
-            </plugin>   
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

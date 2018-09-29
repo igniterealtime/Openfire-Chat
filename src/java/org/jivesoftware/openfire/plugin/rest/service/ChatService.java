@@ -846,9 +846,9 @@ public class ChatService {
     }
 
     @GET
-    @Path("/{streamid}/assists/{workgroup}")
+    @Path("/{streamid}/assists/queues")
     @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
-    public AssistQueues getQueues(@PathParam("streamid") String streamid, @PathParam("workgroup") String workgroup) throws ServiceException
+    public AssistQueues getQueues(@PathParam("streamid") String streamid) throws ServiceException
     {
         try {
            OpenfireConnection connection = OpenfireConnection.getConnection(streamid);
@@ -858,9 +858,7 @@ public class ChatService {
                 throw new ServiceException("Exception", "xmpp connection not found", ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
             }
 
-            if (workgroup.indexOf("@") == -1) workgroup = workgroup + "@workgroup." + server.getServerInfo().getXMPPDomain();
-
-            AssistQueues queues = connection.getQueues(workgroup);
+            AssistQueues queues = connection.getQueues();
 
             if (queues == null)
             {
