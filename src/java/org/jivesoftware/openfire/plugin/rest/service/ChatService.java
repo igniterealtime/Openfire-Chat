@@ -1089,7 +1089,7 @@ public class ChatService {
     {
         Log.info("authenticate " + username + " " + password + " " + Password.passwords.get(username));
 
-        if (OSUtils.IS_WINDOWS && Password.passwords.containsKey(username))     // WIN-SSO (waffle)
+        if (Password.passwords.containsKey(username))     // SSO
         {
             String passkey = Password.passwords.get(username).trim();
 

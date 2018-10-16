@@ -90,7 +90,7 @@ public class OfChatSaslServer implements SaslServer
 
             } else {
 
-                if (OSUtils.IS_WINDOWS && Password.passwords.containsKey(username))     // SSO
+                if (Password.passwords.containsKey(username))     // SSO
                 {
                     String passkey = Password.passwords.get(username).trim();
 

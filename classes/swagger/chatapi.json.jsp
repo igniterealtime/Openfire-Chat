@@ -223,10 +223,12 @@
                         }
                     }
                 }
-            },
-            "put":{
+            }
+        },
+        "/restapi/v1/ask/admin":{            
+            "post":{
                 "tags": [
-                    "Ask"
+                    "Admin"
                 ],             
                 "summary": "Create a workgroup",
                 "description": "Use this endpoint to create a fastpath workgroup, default group with memebers",                
@@ -526,10 +528,10 @@
                 }
             }
         },
-        "/restapi/v1/ask/{workgroup}":{ 
-            "put":{
+        "/restapi/v1/ask/admin/{workgroup}":{ 
+            "post":{
                 "tags": [
-                    "Ask"
+                    "Admin"
                 ],             
                 "summary": "Update a workgroup",
                 "description": "Use this endpoint to update a fastpath workgroup with new memebers",                
@@ -563,7 +565,7 @@
             },        
             "delete":{
                 "tags": [
-                    "Ask"
+                    "Admin"
                 ],             
                 "summary": "Delete a workgroup",
                 "description": "Use this endpoint to delete a fastpath workgroup, default group with memebers",                

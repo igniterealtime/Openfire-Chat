@@ -86,8 +86,8 @@ public class AskService {
         return assistance;
     }
 
-    @PUT
-    @Path("/")
+    @POST
+    @Path("/admin")
     @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
     public Response createWorgroup(WorkgroupEntity workgroup) throws ServiceException
     {
@@ -105,8 +105,8 @@ public class AskService {
 
         return Response.status(Response.Status.OK).build();
     }
-    @PUT
-    @Path("/{workgroup}")
+    @POST
+    @Path("/admin/{workgroup}")
     @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
     public Response updateWorgroup(@PathParam("workgroup") String workgroup, String members) throws ServiceException
     {
@@ -130,7 +130,7 @@ public class AskService {
     }
 
     @DELETE
-    @Path("/{workgroup}")
+    @Path("/admin/{workgroup}")
     @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
     public Response deleteWorgroup(@PathParam("workgroup") String workgroup) throws ServiceException
     {

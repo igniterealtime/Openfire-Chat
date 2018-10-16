@@ -121,7 +121,7 @@ public class AuthFilter implements ContainerRequestFilter {
                 }
             }
 
-            if (OSUtils.IS_WINDOWS && Password.passwords.containsKey(usernameAndPassword[0]))     // WIN-SSO (waffle)
+            if (Password.passwords.containsKey(usernameAndPassword[0]))     // SSO
             {
                 String passkey = Password.passwords.get(usernameAndPassword[0]).trim();
 
