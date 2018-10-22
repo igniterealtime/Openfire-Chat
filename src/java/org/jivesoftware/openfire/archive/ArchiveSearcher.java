@@ -33,8 +33,8 @@ import java.util.NoSuchElementException;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.DateTools;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.queryParser.ParseException;
-import org.apache.lucene.queryParser.QueryParser;
+import org.apache.lucene.queryparser.classic.ParseException;
+import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Filter;
@@ -69,7 +69,7 @@ import org.jivesoftware.util.JiveGlobals;
  */
 public class ArchiveSearcher implements Startable {
 
-	private static final Logger Log = LoggerFactory.getLogger(ArchiveSearch.class);
+    private static final Logger Log = LoggerFactory.getLogger(ArchiveSearch.class);
 
     private Directory directory;
     private IndexSearcher searcher;
@@ -98,7 +98,7 @@ public class ArchiveSearcher implements Startable {
      */
     public Collection<Conversation> search(ArchiveSearch search)
     {
-		Log.info("ArchiveSearcher search " + search);
+        Log.info("ArchiveSearcher search " + search);
 
         // If the search has a query string it will be driven by Lucene. Otherwise
         if (search.getQueryString() != null) {
@@ -117,38 +117,38 @@ public class ArchiveSearcher implements Startable {
      */
     private Collection<Conversation> luceneSearch(ArchiveSearch search)
     {
-		Log.info("luceneSearch search " + search);
+        Log.info("luceneSearch search " + search);
 
         try {
 
-			File searchDir = new File(JiveGlobals.getHomeDirectory() + File.separator + MonitoringConstants.NAME + File.separator + "search");
+            File searchDir = new File(JiveGlobals.getHomeDirectory() + File.separator + MonitoringConstants.NAME + File.separator + "search");
 
-			if (!searchDir.exists())
-			{
-				Log.error("Search folder missing " + searchDir);
-				return Collections.emptySet();
-			}
-			try {
-				if (IndexReader.indexExists(searchDir)) {
-					directory = FSDirectory.getDirectory(searchDir, false);
-				}
-				else {
-					directory = FSDirectory.getDirectory(searchDir, true);
-				}
-			}
-			catch (IOException ioe) {
-				Log.error(ioe.getMessage(), ioe);
-				return Collections.emptySet();
-			}
+            if (!searchDir.exists())
+            {
+                Log.error("Search folder missing " + searchDir);
+                return Collections.emptySet();
+            }
+            try {
+                if (IndexReader.indexExists(searchDir)) {
+                    directory = FSDirectory.getDirectory(searchDir, false);
+                }
+                else {
+                    directory = FSDirectory.getDirectory(searchDir, true);
+                }
+            }
+            catch (IOException ioe) {
+                Log.error(ioe.getMessage(), ioe);
+                return Collections.emptySet();
+            }
 
-			if (searcher == null) {
-				searcher = new IndexSearcher(directory);
-			}
-			// See if the searcher needs to be closed due to the index being updated.
-			else if (!searcher.getIndexReader().isCurrent()) {
-				searcher.close();
-				searcher = new IndexSearcher(directory);
-			}
+            if (searcher == null) {
+                searcher = new IndexSearcher(directory);
+            }
+            // See if the searcher needs to be closed due to the index being updated.
+            else if (!searcher.getIndexReader().isCurrent()) {
+                searcher.close();
+                searcher = new IndexSearcher(directory);
+            }
 
             final StandardAnalyzer analyzer = new StandardAnalyzer();
 
@@ -263,7 +263,7 @@ public class ArchiveSearcher implements Startable {
      */
     private Collection<Conversation> databaseSearch(ArchiveSearch search)
     {
-		Log.info("databaseSearch search " + search);
+        Log.info("databaseSearch search " + search);
 
         CachedPreparedStatement cachedPstmt = new CachedPreparedStatement();
 
@@ -461,7 +461,7 @@ public class ArchiveSearcher implements Startable {
         }
 
         @Override
-		public Iterator<Conversation> iterator() {
+        public Iterator<Conversation> iterator() {
             final Iterator<Long> convIterator = conversationIDs.iterator();
             return new Iterator<Conversation>() {
 
@@ -478,7 +478,7 @@ public class ArchiveSearcher implements Startable {
                 }
 
                 public Conversation next() {
-                	Conversation element;
+                    Conversation element;
                     if (nextElement != null) {
                         element = nextElement;
                         nextElement = null;
@@ -515,7 +515,7 @@ public class ArchiveSearcher implements Startable {
         }
 
         @Override
-		public int size() {
+        public int size() {
             return conversationIDs.size();
         }
     }
@@ -544,7 +544,7 @@ public class ArchiveSearcher implements Startable {
         }
 
         @Override
-		public Iterator<Conversation> iterator() {
+        public Iterator<Conversation> iterator() {
             final Iterator<Hit> hitsIterator = hits.iterator();
             // Advance the iterator until we hit the index.
             for (int i=0; i<index; i++) {
@@ -565,7 +565,7 @@ public class ArchiveSearcher implements Startable {
                 }
 
                 public Conversation next() {
-                	Conversation element;
+                    Conversation element;
                     if (nextElement != null) {
                         element = nextElement;
                         nextElement = null;
@@ -610,7 +610,7 @@ public class ArchiveSearcher implements Startable {
         }
 
         @Override
-		public int size() {
+        public int size() {
             return hits.length();
         }
     }
