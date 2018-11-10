@@ -48,6 +48,7 @@ import org.dom4j.*;
 import javax.mail.Message;
 import javax.mail.Session;
 import javax.mail.*;
+import javax.mail.internet.*;
 import javax.mail.event.MessageCountAdapter;
 import javax.mail.event.MessageCountEvent;
 import java.security.Security;
@@ -58,6 +59,8 @@ import java.io.*;
 import java.sql.Connection;
 import java.sql.*;
 import java.text.SimpleDateFormat;
+
+import java.nio.charset.StandardCharsets;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,6 +76,13 @@ import org.jxmpp.jid.*;
 import org.jxmpp.jid.impl.JidCreate;
 import org.jxmpp.jid.parts.Resourcepart;
 import org.jxmpp.stringprep.XmppStringprepException;
+
+import org.subethamail.smtp.*;
+import org.subethamail.smtp.helper.*;
+import org.subethamail.smtp.server.*;
+import org.subethamail.smtp.server.SMTPServer.*;
+
+import com.overzealous.remark.Remark;
 
 
 /**
@@ -97,6 +107,7 @@ public class EmailListener {
     private static Map<String, Presence> workgroupPresence = new HashMap<String, Presence>();
     private static Map workgroups = new HashMap();
     private static Map<String, XMPPTCPConnection> globalConnections = new HashMap<String, XMPPTCPConnection>();
+    private SMTPServer smtpServer = null;
 
     public static EmailListener getInstance() {
         return instance;
@@ -146,6 +157,22 @@ public class EmailListener {
         thread.setDaemon(true);
         thread.start();
         started = true;
+
+        if (isSmtpEnabled())
+        {
+            Log.info("SMTP Listener started");
+
+            try {
+                smtpServer = SMTPServer.port(Integer.valueOf(JiveGlobals.getProperty("ofmeet.email.listener.smtp.port", "25000")))
+                  .messageHandlerFactory(new SimpleMessageListenerAdapter(new SimpleMessageListenerImpl()))
+                  .build();
+
+                smtpServer.start();
+
+            } catch (Exception e) {
+                Log.error("SMTP Listener error", e);
+            }
+        }
     }
 
     /**
@@ -156,6 +183,8 @@ public class EmailListener {
         started = false;
         folder = null;
         messageListener = null;
+
+        if (smtpServer != null) smtpServer.stop();
     }
 
     private void listenMessages() {
@@ -787,6 +816,15 @@ public class EmailListener {
         JiveGlobals.setProperty("ofmeet.email.listener.frequency", Integer.toString(frequency));
     }
     /**
+     * Sets if fastpath authentication is required.
+     *
+     * @param enabled true if fastpath authentication is required
+     */
+    public void setFastpathAuthEnabled(boolean enabled) {
+        JiveGlobals.setProperty("ofmeet.email.listener.fastpath.auth", Boolean.toString(enabled));
+    }
+
+    /**
      * Returns true if fastpath authentication is required
      *
      * @return true if fastpath authentication is required
@@ -796,13 +834,22 @@ public class EmailListener {
     }
 
     /**
-     * Sets if fastpath authentication is required.
+     * Sets if smtp listener to enabled.
      *
-     * @param enabled true if fastpath authentication is required
+     * @param enabled true if smtp listener is enabled
      */
-    public void setFastpathAuthEnabled(boolean enabled) {
-        JiveGlobals.setProperty("ofmeet.email.listener.fastpath.auth", Boolean.toString(enabled));
+    public void setSmtpEnabled(boolean enabled) {
+        JiveGlobals.setProperty("ofmeet.email.listener.smtp", Boolean.toString(enabled));
     }
+    /**
+     * Returns true if smtp listener is enabled
+     *
+     * @return true if smtp listener is enabled
+     */
+    public boolean isSmtpEnabled() {
+        return JiveGlobals.getBooleanProperty("ofmeet.email.listener.smtp", true);
+    }
+
     /**
      * Returns true if SSL is enabled to connect to the server.
      *
@@ -1227,6 +1274,78 @@ public class EmailListener {
         return buffer.toString();
     }
 
+    public class SimpleMessageListenerImpl implements SimpleMessageListener
+    {
+        public SimpleMessageListenerImpl()
+        {
+
+        }
+
+        @Override public boolean accept(String from, String recipient)
+        {
+            Log.info("Accepting new email from " + from + " to " + recipient);
+            return org.jivesoftware.openfire.plugin.rest.RESTServicePlugin.emailAccept(from, recipient);
+        }
+
+        @Override public void deliver(String from, String recipient, InputStream data)
+        {
+            Session session = Session.getDefaultInstance(new Properties());
+
+            try {
+                MimeMessage mimeMessage = new MimeMessage(session, data);
+                Log.info("Got message  body from " + from + " for " + recipient + " " + mimeMessage.getSubject() + " " + getTextFromMessage(mimeMessage));
+                org.jivesoftware.openfire.plugin.rest.RESTServicePlugin.emailIncoming(from, recipient, getTextFromMessage(mimeMessage));
+
+            } catch (Exception e) {
+                Log.error("SimpleMessageListenerImpl", e);
+            }
+        }
+
+    }
+
+    private String getTextFromMessage(Message message) throws MessagingException, IOException
+    {
+        String result = "";
+
+        if (message.isMimeType("text/plain")) {
+            result = message.getContent().toString();
+
+        } else if (message.isMimeType("multipart/*")) {
+            MimeMultipart mimeMultipart = (MimeMultipart) message.getContent();
+            result = getTextFromMimeMultipart(mimeMultipart);
+        }
+        return result;
+    }
+
+    private String getTextFromMimeMultipart(MimeMultipart mimeMultipart)  throws MessagingException, IOException
+    {
+        String plainText = null;
+        String htmlText = null;
+        String result = null;
+
+        int count = mimeMultipart.getCount();
+
+        for (int i = 0; i < count; i++)
+        {
+            BodyPart bodyPart = mimeMultipart.getBodyPart(i);
+
+            if (bodyPart.isMimeType("text/html"))
+            {
+                Remark remark = new Remark();
+                String html = (String) bodyPart.getContent();
+                htmlText = remark.convertFragment(html);
+            }
+            else
+
+            if (bodyPart.isMimeType("text/plain")) {
+                plainText = bodyPart.getContent().toString();
+
+            } else if (bodyPart.getContent() instanceof MimeMultipart){
+                result = getTextFromMimeMultipart((MimeMultipart)bodyPart.getContent());
+            }
+        }
+        return result == null ? (htmlText == null ? plainText : htmlText) : result;
+    }
 /*
 
     BEGIN:VCALENDAR

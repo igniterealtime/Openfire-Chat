@@ -18,6 +18,7 @@ package org.jivesoftware.openfire.plugin.rest;
 
 import java.io.File;
 import java.io.FilenameFilter;
+import java.io.IOException;
 import java.util.*;
 import java.net.*;
 import java.util.concurrent.*;
@@ -26,6 +27,7 @@ import java.security.Security;
 import java.security.cert.Certificate;
 
 import java.nio.charset.Charset;
+import java.nio.file.attribute.FileTime;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -47,6 +49,7 @@ import org.jivesoftware.openfire.auth.AuthFactory;
 import org.jivesoftware.openfire.user.*;
 import org.jivesoftware.openfire.event.*;
 import org.jivesoftware.openfire.group.*;
+import org.jivesoftware.openfire.roster.*;
 import org.jivesoftware.openfire.muc.*;
 import org.jivesoftware.openfire.session.*;
 import org.jivesoftware.openfire.interceptor.*;
@@ -66,15 +69,13 @@ import org.jivesoftware.openfire.plugin.spark.*;
 
 import org.jivesoftware.util.cache.Cache;
 import org.jivesoftware.util.cache.CacheFactory;
-import org.jivesoftware.util.JiveGlobals;
-import org.jivesoftware.util.PropertyEventDispatcher;
-import org.jivesoftware.util.PropertyEventListener;
-import org.jivesoftware.util.StringUtils;
+import org.jivesoftware.util.*;
 
 import org.eclipse.jetty.apache.jsp.JettyJasperInitializer;
 import org.eclipse.jetty.plus.annotation.ContainerInitializer;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.servlet.*;
+import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.eclipse.jetty.fcgi.server.proxy.*;
 import org.eclipse.jetty.proxy.ProxyServlet;
@@ -112,6 +113,8 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
     private static final String CUSTOM_AUTH_FILTER_PROPERTY_NAME = "plugin.ofchat.customAuthFilter";
     private static final UserManager userManager = XMPPServer.getInstance().getUserManager().getInstance();
     private static final String DOMAIN = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
+    private static final RosterManager ROSTER_MANAGER = XMPPServer.getInstance().getRosterManager();
+    private static final MessageRouter MESSAGE_ROUTER = XMPPServer.getInstance().getMessageRouter();
 
     /** The authentication secret. */
     private String secret;
@@ -125,6 +128,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
     /** The enabled. */
     private boolean enabled;
     private boolean smsEnabled;
+    private boolean emailEnabled;
     private String smsProvider;
     private boolean adhocEnabled;
     private boolean swaggerSecure;
@@ -154,8 +158,9 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
     public Cache<String, SipAccount> sipCache;
     public Cache<String, SipAccount> sipCache2;
 
-    private Map<String, IQ> addhocCommands = new ConcurrentHashMap<String, IQ>();
-
+    private Map<String, IQ> addhocCommands;
+    private TempFileToucherTask tempFileToucherTask;
+    private ArrayList<Handler> handlers = new ArrayList<>();
 
     /**
      * Gets the single instance of RESTServicePlugin.
@@ -171,6 +176,8 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
      */
     public void initializePlugin(PluginManager manager, File pluginDirectory)
     {
+        addhocCommands = new ConcurrentHashMap<String, IQ>();
+
         INSTANCE = this;
         this.pluginDirectory = pluginDirectory;
 
@@ -200,6 +207,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         // See if the service is enabled or not.
         enabled = JiveGlobals.getBooleanProperty("plugin.restapi.enabled", false);
         smsEnabled = JiveGlobals.getBooleanProperty("ofchat.sms.enabled", false);
+        emailEnabled = JiveGlobals.getBooleanProperty("ofchat.email.enabled", false);
         smsProvider = JiveGlobals.getProperty("ofchat.sms.provider", "mexmo");
         adhocEnabled = JiveGlobals.getBooleanProperty("ofchat.adhoc.commands.enabled", false);
         swaggerSecure = JiveGlobals.getBooleanProperty("ofchat.swagger.secure", false);
@@ -226,7 +234,9 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         initializers.add(new ContainerInitializer(new JettyJasperInitializer(), null));
         context.setAttribute("org.eclipse.jetty.containerInitializers", initializers);
         context.setAttribute(InstanceManager.class.getName(), new SimpleInstanceManager());
+
         HttpBindManager.getInstance().addJettyHandler(context);
+        handlers.add(context);
 
         Log.info("Initialize SSE");
 
@@ -241,7 +251,9 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         initializers2.add(new ContainerInitializer(new JettyJasperInitializer(), null));
         context2.setAttribute("org.eclipse.jetty.containerInitializers", initializers2);
         context2.setAttribute(InstanceManager.class.getName(), new SimpleInstanceManager());
+
         HttpBindManager.getInstance().addJettyHandler(context2);
+        handlers.add(context2);
 
 
         Log.info("Initialize Swagger WebService ");
@@ -263,7 +275,9 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         context3.setAttribute("org.eclipse.jetty.containerInitializers", initializers3);
         context3.setAttribute(InstanceManager.class.getName(), new SimpleInstanceManager());
         context3.setWelcomeFiles(new String[]{"index.html"});
+
         HttpBindManager.getInstance().addJettyHandler(context3);
+        handlers.add(context3);
 
         Log.info("Initialize Dashboard WebService ");
 
@@ -282,7 +296,9 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         context5.setAttribute("org.eclipse.jetty.containerInitializers", initializers5);
         context5.setAttribute(InstanceManager.class.getName(), new SimpleInstanceManager());
         context5.setWelcomeFiles(new String[]{"index.jsp"});
+
         HttpBindManager.getInstance().addJettyHandler(context5);
+        handlers.add(context5);
 
         Log.info("Initialize Unsecure Apps WebService ");
 
@@ -294,7 +310,9 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         context6.setAttribute("org.eclipse.jetty.containerInitializers", initializers6);
         context6.setAttribute(InstanceManager.class.getName(), new SimpleInstanceManager());
         context6.setWelcomeFiles(new String[]{"index.jsp"});
+
         HttpBindManager.getInstance().addJettyHandler(context6);
+        handlers.add(context6);
 
         if (OSUtils.IS_WINDOWS)
         {
@@ -317,6 +335,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             context7.addFilter(filterHolder, "/*", enums);
 
             HttpBindManager.getInstance().addJettyHandler(context7);
+            handlers.add(context7);
         }
 
         proxyContexts = new HashMap<String, ServletContextHandler>();
@@ -341,6 +360,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
                 HttpBindManager.getInstance().addJettyHandler(proxyContext);
                 proxyContexts.put(propertyName, proxyContext);
+                handlers.add(proxyContext);
             }
         }
 
@@ -447,11 +467,19 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         sipCache2.setMaxCacheSize(-1);
         sipCache2.setMaxLifetime(3600 * 1000);
 
-        if ( smsEnabled )
+        if ( smsEnabled || EmailListener.getInstance().isSmtpEnabled())
         {
             Log.info("Setup SMS message interceptor");
             InterceptorManager.getInstance().addInterceptor(this);
         }
+
+        if ( JiveGlobals.getBooleanProperty( "ofchat.toucher.enabled", true))
+        {
+            tempFileToucherTask = new TempFileToucherTask();
+            final long period = JiveGlobals.getLongProperty( "jetty.temp-file-toucher.period", JiveConstants.DAY );
+            TaskEngine.getInstance().schedule( tempFileToucherTask, period, period );
+        }
+
     }
 
     /* (non-Javadoc)
@@ -496,6 +524,12 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         } catch (Exception e) {}
 
         InterceptorManager.getInstance().removeInterceptor(this);
+
+        if ( tempFileToucherTask != null )
+        {
+            TaskEngine.getInstance().cancelScheduledTask( tempFileToucherTask );
+            tempFileToucherTask = null;
+        }
     }
 
     /**
@@ -696,6 +730,15 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         JiveGlobals.setProperty("plugin.restapi.enabled", enabled ? "true" : "false");
     }
 
+    public boolean isEmailEnabled() {
+        return emailEnabled;
+    }
+
+    public void setEmailEnabled(boolean emailEnabled) {
+        this.emailEnabled = emailEnabled;
+        JiveGlobals.setProperty("ofchat.email.enabled", emailEnabled ? "true" : "false");
+    }
+
     public boolean isSmsEnabled() {
         return smsEnabled;
     }
@@ -807,7 +850,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     public void addServlet(ServletHolder holder, String path)
     {
-        Log.info("addServlet " + holder.getName());
+        Log.debug("addServlet " + holder.getName());
 
         try {
             context2.addServlet(holder, path);
@@ -818,7 +861,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     public void removeServlets(ServletHolder deleteHolder)
     {
-       Log.info("removeServlets " + deleteHolder.getName());
+       Log.debug("removeServlets " + deleteHolder.getName());
 
        try {
            ServletHandler handler = context2.getServletHandler();
@@ -1012,14 +1055,15 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             Message message = (Message) packet;
             final JID fromJID = message.getFrom();
             final JID toJID = message.getTo();
+            final String body = message.getBody();
 
-            if (message.getBody() != null && Message.Type.chat == message.getType())
+            if (body != null && Message.Type.chat == message.getType())
             {
-                if (fromJID.getNode() != null && toJID.getNode() != null)
+                if (fromJID.getNode() != null && toJID.getNode() != null && DOMAIN.equals(fromJID.getDomain()) && DOMAIN.equals(toJID.getDomain()))
                 {
                     try {
                         String from = fromJID.getNode().toString();
-                        String to = toJID.getNode().toString();
+                        String to = JID.unescapeNode(toJID.getNode().toString());
 
                         User fromUser = null;
 
@@ -1028,35 +1072,50 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
                         if (fromUser != null)
                         {
                             String smsFrom = fromUser.getProperties().get("sms_out_number");
-                            String smsTo = null;
 
-                            if (to.startsWith("sms-"))
+                            if (smsFrom != null)    // SMS
                             {
-                                smsTo = to.substring(4);
+                                Log.debug("interceptPacket - sms " + smsFrom);
 
-                            } else {
-                                try {
-                                    User toUser = userManager.getUser(to);
-                                    smsTo = toUser.getProperties().get("sms_in_number");
-                                } catch (Exception e1) {}
+                                String smsTo = null;
+
+                                if (to.startsWith("sms-"))  // reply to SMS
+                                {
+                                    smsTo = to.substring(4);
+
+                                } else {                    // forward to SMS of reciever if available
+                                                            // TODO - check presence. if online don't forward
+
+                                    User toUser = null;
+                                    try {toUser = userManager.getUser(to);} catch (Exception e1) {}
+                                    if (toUser != null) smsTo = toUser.getProperties().get("sms_in_number");
+                                }
+
+                                if (smsTo != null)
+                                {
+                                    if ("nexmo".equals(JiveGlobals.getProperty("ofchat.sms.provider", "nexmo")))
+                                    {
+                                        org.ifsoft.sms.nexmo.Servlet.smsOutgoing(smsTo, smsFrom, body);
+                                    }
+                                }
                             }
 
-                            if (smsTo != null && smsFrom != null)
+                            if (to.indexOf("@") > -1)       // EMAIL
                             {
-                                String body = message.getBody();
+                                Log.debug("interceptPacket - email to " + to + " " + from);
 
-                                try {
-                                    JSONObject jsonBody = new JSONObject(body);
+                                org.jivesoftware.openfire.roster.Roster roster = ROSTER_MANAGER.getRoster(from);
 
-                                    if (jsonBody.has("body"))
-                                    {
-                                        body = jsonBody.getString("body");
-                                    }
-                                } catch (Exception e1) {}
-
-                                if ("nexmo".equals(JiveGlobals.getProperty("ofchat.sms.provider", "nexmo")))
+                                if (roster != null)
                                 {
-                                    org.ifsoft.sms.nexmo.Servlet.smsOutgoing(smsTo, smsFrom, body);
+                                    RosterItem friend = roster.getRosterItem(toJID);
+
+                                    Log.debug("interceptPacket - email roster " + friend.getNickname() + " " + fromJID.getResource());
+
+                                    if (friend != null)
+                                    {
+                                        MeetService.sendEmailMessage(friend.getNickname(), to, fromUser.getName(), fromJID.toBareJID(), fromJID.getResource(), body, null);
+                                    }
                                 }
                             }
                         }
@@ -1067,6 +1126,64 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
                 }
             }
         }
+    }
+
+    public static boolean emailAccept(String from, String to)
+    {
+        boolean accept = false;
+
+        try {
+            org.jivesoftware.openfire.roster.Roster roster = ROSTER_MANAGER.getRoster(to.split("@")[0]);
+
+            if (roster != null)
+            {
+                String fromJid = JID.escapeNode(from) + "@" + DOMAIN;
+                RosterItem friend = roster.getRosterItem(new JID(fromJid));
+                accept = friend != null;
+
+                OpenfireConnection conn = OpenfireConnection.createConnection(JID.escapeNode(from), null, true);
+                conn.postPresence("available", null);
+            }
+
+
+        } catch (Exception e) {
+            Log.error("emailAccept", e);
+        }
+
+        return accept;
+    }
+
+
+    public static void emailIncoming(String from, String toJid, String text)
+    {
+        String fromJid = JID.escapeNode(from) + "@" + DOMAIN;
+
+        Message message = new Message();
+        message.setType(Message.Type.chat);
+        message.setFrom(fromJid);
+        message.setTo(toJid);
+
+        int pos1 = text.indexOf("-- \n");
+        int pos2 = text.indexOf("--\n");
+        int pos3 = text.indexOf("From: ");
+        int pos4 = text.indexOf("-----Original Message-----");
+        int pos5 = text.indexOf("________________________________");
+        int pos6 = text.indexOf("--------------------");
+        int pos7 = text.indexOf("Sent from ");
+
+        String msg = text;
+
+        if (pos1 > -1) msg = text.substring(0, pos1);
+        if (pos2 > -1) msg = text.substring(0, pos2);
+        if (pos3 > -1) msg = text.substring(0, pos3);
+        if (pos4 > -1) msg = text.substring(0, pos4);
+        if (pos5 > -1) msg = text.substring(0, pos5);
+        if (pos6 > -1) msg = text.substring(0, pos6);
+        if (pos7 > -1) msg = text.substring(0, pos7);
+
+        message.setBody(msg);
+
+        MESSAGE_ROUTER.route(message);
     }
 
     public static void smsIncoming(JSONObject sms)
@@ -1120,11 +1237,14 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
                     if (fromUsers.size() > 0)
                     {
+                        // real user with xmpp account
                         fromJid = fromUsers.get(0) + "@" + DOMAIN;
                     } else {
                         String fromSMS = "sms-" + sms.getString("msisdn");
                         fromJid = fromSMS + "@" + DOMAIN;
-                        OpenfireConnection.createConnection(fromSMS, null, true);
+
+                        OpenfireConnection conn = OpenfireConnection.createConnection(fromSMS, null, true);
+                        conn.postPresence("available", null);
                     }
 
                     Message message = new Message();
@@ -1133,7 +1253,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
                     message.setTo(toJid);
                     message.setBody(sms.getString("text"));
 
-                    XMPPServer.getInstance().getMessageRouter().route(message);
+                    MESSAGE_ROUTER.route(message);
                 }
             } catch (Exception e) {
                 Log.error("smsIncoming", e);
@@ -1178,7 +1298,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
         if (bruteForceLogoff)
         {
-            Log.info("logoff - " + jid);
+            Log.debug("logoff - " + jid);
 
             String userJid = jid.toBareJID();
 
@@ -1189,7 +1309,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
                 for (MUCRoom chatRoom : rooms)
                 {
                     try {
-                        Log.info("forcing " + userJid + " out of " + chatRoom.getName());
+                        Log.debug("forcing " + userJid + " out of " + chatRoom.getName());
 
                         chatRoom.addNone(new JID(userJid), chatRoom.getRole());
 
@@ -1212,7 +1332,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     protected void loadWarFile() throws Exception
     {
-        Log.info( "Initializing warfile application" );
+        Log.debug( "Initializing warfile application" );
         Log.debug( "Identify the name of the warfile archive file" );
 
         final File libs = new File(pluginDirectory.getPath() + File.separator + "classes");
@@ -1255,6 +1375,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         warfile.setAttribute(InstanceManager.class.getName(), new SimpleInstanceManager());
 
         HttpBindManager.getInstance().addJettyHandler( warfile );
+        handlers.add(warfile);
 
         Log.debug( "Initialized warfile application" );
     }
@@ -1317,7 +1438,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         {
             public Boolean call() throws Exception
             {
-                Log.info("Refreshing client certificates");
+                Log.debug("Refreshing client certificates");
 
                 String c2sTrustStoreLocation = JiveGlobals.getHomeDirectory() + File.separator + "resources" + File.separator + "security" + File.separator;
                 String certificatesHome = JiveGlobals.getHomeDirectory() + File.separator + "certificates";
@@ -1332,7 +1453,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
                             String alias = file.getName();
                             String aliasHome = certificatesHome + File.separator + alias;
 
-                            Log.info("Client certificate " + alias);
+                            Log.debug("Client certificate " + alias);
 
                             String command3 = "-delete -keystore " + c2sTrustStoreLocation + "truststore -storepass changeit -alias " + alias;
                             System.err.println(command3);
@@ -1563,7 +1684,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
         public void closeVirtualConnection()
         {
-            Log.info("AdminConnection - close ");
+            Log.debug("AdminConnection - close ");
         }
 
         public byte[] getAddress() {
@@ -1615,7 +1736,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
         public void deliverRawText(String text)
         {
-            Log.info("AdminConnection - deliverRawText\n" + text);
+            Log.debug("AdminConnection - deliverRawText\n" + text);
         }
 
         @Override
@@ -1628,5 +1749,38 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             return null;
         }
 
+    }
+
+    private class TempFileToucherTask extends TimerTask
+    {
+        @Override
+        public void run()
+        {
+            final FileTime now = FileTime.fromMillis( System.currentTimeMillis() );
+            for ( final Handler handler : handlers )
+            {
+                final File tempDirectory = ((WebAppContext) handler).getTempDirectory();
+                try
+                {
+                    Log.debug( "Updating the last modified timestamp of content in Jetty's temporary storage in: {}", tempDirectory);
+                    Files.walk( tempDirectory.toPath() )
+                        .forEach( f -> {
+                            try
+                            {
+                                Log.trace( "Setting the last modified timestamp of file '{}' in Jetty's temporary storage to: {}", f, now);
+                                Files.setLastModifiedTime( f, now );
+                            }
+                            catch ( IOException e )
+                            {
+                                Log.warn( "An exception occurred while trying to update the last modified timestamp of content in Jetty's temporary storage in: {}", f, e );
+                            }
+                        } );
+                }
+                catch ( IOException e )
+                {
+                    Log.warn( "An exception occurred while trying to update the last modified timestamp of content in Jetty's temporary storage in: {}", tempDirectory, e );
+                }
+            }
+        }
     }
 }

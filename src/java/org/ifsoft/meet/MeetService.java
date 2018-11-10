@@ -3,7 +3,12 @@ package org.ifsoft.meet;
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.text.SimpleDateFormat;
 
+import javax.mail.*;
+import javax.mail.internet.*;
+
+import javax.servlet.http.HttpServletRequest;
 import javax.annotation.PostConstruct;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -16,7 +21,11 @@ import javax.ws.rs.DefaultValue;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Context;
 
+import org.jivesoftware.openfire.XMPPServer;
+import org.jivesoftware.openfire.roster.*;
+import org.jivesoftware.openfire.user.*;
 import org.jivesoftware.openfire.plugin.rest.controller.UserServiceController;
 import org.jivesoftware.openfire.plugin.rest.entity.UserEntities;
 import org.jivesoftware.openfire.plugin.rest.entity.UserEntity;
@@ -28,12 +37,18 @@ import org.jivesoftware.util.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.jivesoftware.openfire.plugin.rest.BasicAuth;
+import org.xmpp.packet.JID;
+import net.sf.json.*;
 
 @Path("restapi/v1/meet")
 public class MeetService {
 
     private static final Logger Log = LoggerFactory.getLogger(MeetService.class);
     private MeetController meetController;
+
+    @Context
+    private HttpServletRequest httpRequest;
 
     @PostConstruct
     public void init()
@@ -224,6 +239,158 @@ public class MeetService {
 
     //-------------------------------------------------------
     //
+    //  Custom Profile update/delete. Use chat/users to fetch
+    //
+    //-------------------------------------------------------
+
+    @POST
+    @Path("/profile")
+    public Response setUserProperties(String properties) throws ServiceException
+    {
+        Log.info("setUserProperties " + properties);
+        try {
+
+            String username = getEndUser();
+            User user = XMPPServer.getInstance().getUserManager().getUser(username);
+
+            JSONArray profileProperties = new JSONArray(properties);
+
+            for (int i = 0; i < profileProperties.length(); i++)
+            {
+                JSONObject property = profileProperties.getJSONObject(i);
+
+                Log.info("setUserProperty " + username + " " + property.getString("name") + " " + property.getString("value"));
+
+                if (property.getString("name") != null && property.getString("value") != null)
+                {
+                    user.getProperties().put(property.getString("name"), property.getString("value"));
+                }
+            }
+
+        } catch (Exception e) {
+            Log.error("setUserProperty", e);
+            throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+        }
+        return Response.status(Response.Status.OK).build();
+    }
+
+    @DELETE
+    @Path("/profile/{propertyName}")
+    public Response deleteUserProperty(@PathParam("propertyName") String propertyName) throws ServiceException
+    {
+        try {
+            User user = XMPPServer.getInstance().getUserManager().getUser(getEndUser());
+            user.getProperties().remove(propertyName);
+
+        } catch (Exception e) {
+            Log.error("deleteUserProperty", e);
+            throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+        }
+        return Response.status(Response.Status.OK).build();
+    }
+
+    //-------------------------------------------------------
+    //
+    //  Contacts/Friends
+    //
+    //-------------------------------------------------------
+
+    @POST
+    @Path("/friend")
+    public Response createFriend(Friend friend) throws ServiceException
+    {
+        try {
+            String username = getEndUser();
+            String response = createFriendship(username, friend.getJid(), friend.getNickname(), friend.getGroups());
+
+            if (response == null)
+            {
+                return Response.status(Response.Status.OK).build();
+            }
+
+        } catch (Exception e) {
+            Log.error("createFriend", e);
+        }
+        return Response.status(Response.Status.BAD_REQUEST).build();
+    }
+
+    private String createFriendship(String username, String contactJid, String contactName, String groupList)
+    {
+        Log.debug("createFriendship " + username + " " + contactJid + " " + contactName + " " + groupList);
+
+        String response = null;
+
+        try {
+            org.jivesoftware.openfire.roster.Roster roster = XMPPServer.getInstance().getRosterManager().getRoster(username);
+
+            if (roster != null)
+            {
+                ArrayList<String> groups = new ArrayList<String>();
+
+                if (groupList != null && !"".equals(groupList))
+                {
+                    String tokens[] = groupList.split(",");
+
+                    for (int i=0; i<tokens.length; i++)
+                    {
+                       groups.add(tokens[i]);
+                    }
+                }
+
+                JID toUserJid = new JID(contactJid);
+                RosterItem gwitem = null;
+
+                if (roster.isRosterItem(toUserJid) == false)
+                {
+                    Log.debug("create friendship " + username + " " + toUserJid + " " + contactName);
+                    gwitem = roster.createRosterItem(toUserJid, true, true);
+
+                } else {
+                    Log.debug("update friendship " + username + " " + toUserJid + " " + contactName);
+                    gwitem = roster.getRosterItem(toUserJid);
+                }
+
+                if (gwitem != null)
+                {
+                    gwitem.setSubStatus(RosterItem.SUB_BOTH);
+                    gwitem.setAskStatus(RosterItem.ASK_NONE);
+                    gwitem.setNickname(contactName);
+                    gwitem.setGroups((List<String>) groups);
+
+                    roster.updateRosterItem(gwitem);
+                    roster.broadcast(gwitem, true);
+
+                }
+            }
+        } catch (Exception e) {
+            Log.error("createFriendship", e);
+            response = e.toString();
+        }
+        return response;
+    }
+
+    private String getEndUser() throws ServiceException
+    {
+        String token = httpRequest.getHeader("authorization");
+
+        Log.debug("getEndUser " + token);
+
+        if (token != null)
+        {
+            String[] usernameAndPassword = BasicAuth.decode(token);
+
+            if (usernameAndPassword != null && usernameAndPassword.length == 2)
+            {
+
+                return usernameAndPassword[0];
+            }
+        }
+
+        throw new ServiceException("Access denied", "Exception", ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+    }
+
+    //-------------------------------------------------------
+    //
     //  SMS
     //
     //-------------------------------------------------------
@@ -246,4 +413,131 @@ public class MeetService {
         return Response.status(Response.Status.BAD_REQUEST).build();
     }
 
+    //-------------------------------------------------------
+    //
+    //  EMAIL
+    //
+    //-------------------------------------------------------
+
+    @POST
+    @Path("/email")
+    public Response sendEmail(Email email) throws ServiceException
+    {
+        try {
+            String response = sendEmailMessage(email.getToName(), email.getTo(), email.getFromName(), email.getFrom(), email.getSubject(), email.getTextBody(), email.getHtmlBody());
+
+            if (response == null)
+            {
+                return Response.status(Response.Status.OK).build();
+            }
+
+        } catch (Exception e) {
+            Log.error("sendEmail", e);
+        }
+        return Response.status(Response.Status.BAD_REQUEST).build();
+    }
+
+    public static String sendEmailMessage(String toName, String toEmail, String fromName, String fromEmail, String subject, String textBody, String htmlBody)
+    {
+        Log.debug("sendEmailMessage " + toName + " " + toEmail + " " + fromName + " " + fromEmail + " " + subject + "\n" + textBody);
+
+        String response = null;
+
+        // Check for errors in the given fields:
+        if (toEmail == null || fromEmail == null || subject == null || (textBody == null && htmlBody == null))
+        {
+            response = "Error sending email: Invalid fields: "
+                    + ((toEmail == null) ? "toEmail " : "")
+                    + ((fromEmail == null) ? "fromEmail " : "")
+                    + ((subject == null) ? "subject " : "")
+                    + ((textBody == null && htmlBody == null) ? "textBody or htmlBody " : "");
+            Log.error("sendMessage " + response);
+        }
+        else {
+            try {
+                String encoding = MimeUtility.mimeCharset("UTF-8");
+                MimeMessage message = EmailService.getInstance().createMimeMessage();
+                Address to;
+                Address from;
+
+                if (toName != null) {
+                    to = new InternetAddress(toEmail, toName, encoding);
+                }
+                else {
+                    to = new InternetAddress(toEmail, "", encoding);
+                }
+
+                if (fromName != null) {
+                    from = new InternetAddress(fromEmail, fromName, encoding);
+                }
+                else {
+                    from = new InternetAddress(fromEmail, "", encoding);
+                }
+
+                // Set the date of the message to be the current date
+                SimpleDateFormat format = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss Z",
+                        java.util.Locale.US);
+                format.setTimeZone(JiveGlobals.getTimeZone());
+                message.setHeader("Date", format.format(new Date()));
+                message.setHeader("Content-Transfer-Encoding", "8bit");
+                message.setRecipient(Message.RecipientType.TO, to);
+                message.setFrom(from);
+                message.setReplyTo(new javax.mail.Address[]{from});
+                message.setSubject(StringUtils.replace(subject, "\n", ""), encoding);
+
+                if (textBody != null && htmlBody != null)
+                {
+                    MimeMultipart content = new MimeMultipart("alternative");
+                    // Plain-text
+                    MimeBodyPart text = new MimeBodyPart();
+                    text.setText(textBody, encoding);
+                    text.setDisposition(Part.INLINE);
+                    content.addBodyPart(text);
+                    // HTML
+                    MimeBodyPart html = new MimeBodyPart();
+                    html.setContent(htmlBody, "text/html; charset=UTF-8");
+                    html.setDisposition(Part.INLINE);
+                   html.setHeader("Content-Transfer-Encoding", "8bit");
+                    content.addBodyPart(html);
+                    // Add multipart to message.
+                    message.setContent(content);
+                    message.setDisposition(Part.INLINE);
+                    EmailService.getInstance().sendMessage(message);
+                }
+                else
+
+                if (textBody != null) {
+                    MimeBodyPart bPart = new MimeBodyPart();
+                    bPart.setText(textBody, encoding);
+                    bPart.setDisposition(Part.INLINE);
+                   bPart.setHeader("Content-Transfer-Encoding", "8bit");
+                    MimeMultipart mPart = new MimeMultipart();
+                    mPart.addBodyPart(bPart);
+                    message.setContent(mPart);
+                    message.setDisposition(Part.INLINE);
+                    // Add the message to the send list
+                    EmailService.getInstance().sendMessage(message);
+                }
+                else
+
+                if (htmlBody != null) {
+                    MimeBodyPart bPart = new MimeBodyPart();
+                    bPart.setContent(htmlBody, "text/html; charset=UTF-8");
+                    bPart.setDisposition(Part.INLINE);
+                    bPart.setHeader("Content-Transfer-Encoding", "8bit");
+                    MimeMultipart mPart = new MimeMultipart();
+                    mPart.addBodyPart(bPart);
+                    message.setContent(mPart);
+                    message.setDisposition(Part.INLINE);
+                    // Add the message to the send list
+                    EmailService.getInstance().sendMessage(message);
+                }
+            }
+            catch (Exception e) {
+                Log.error(e.getMessage(), e);
+                response = e.toString();
+            }
+        }
+        return response;
+    }
 }

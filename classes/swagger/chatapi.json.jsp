@@ -3517,6 +3517,142 @@
                 }
             }
         },
+        "/restapi/v1/meet/email":{
+            "post":{
+                "tags": [
+                    "Meet"
+                ], 
+                "summary": "Send an email from a source to a destination",
+                "description": "",              
+                "consumes":[
+                ],
+                "produces":[
+                ],
+                "parameters":[
+                    {
+                        "name":"body",
+                        "in":"body",
+                        "required":true,
+                        "schema":{
+                            "$ref":"#/definitions/Email"
+                        }
+                    }
+                ],
+                "responses":{
+                    "200":{
+                        "description":"OK",
+                        "headers":{
+                        }
+                    },
+                    "400":{
+                        "description":"Bad Request",
+                        "headers":{
+                        }
+                    }
+                }
+            }
+        },     
+        "/restapi/v1/meet/friend":{
+            "post":{
+                "tags": [
+                    "Meet"
+                ], 
+                "summary": "Create a friendship between connected user and remote contact",
+                "description": "This adds a roster item with automatic 2-way subscription to the authenticted user",              
+                "consumes":[
+                ],
+                "produces":[
+                ],
+                "parameters":[
+                    {
+                        "name":"body",
+                        "in":"body",
+                        "required":true,
+                        "schema":{
+                            "$ref":"#/definitions/Friend"
+                        }
+                    }
+                ],
+                "responses":{
+                    "200":{
+                        "description":"OK",
+                        "headers":{
+                        }
+                    },
+                    "400":{
+                        "description":"Bad Request",
+                        "headers":{
+                        }
+                    }
+                }
+            }
+        },   
+        "/restapi/v1/meet/profile":{
+            "post":{
+                "tags": [
+                    "Meet"
+                ], 
+                "summary": "Add/update properties of connected user",
+                "description": "This only works with an authenticated user",              
+                "consumes":[
+                ],
+                "produces":[
+                ],
+                "parameters":[
+                    "name":"body",
+                    "in":"body",
+                    "required":true,
+                    "schema":{
+                        "type":"string"
+                    }
+                ],
+                "responses":{
+                    "200":{
+                        "description":"OK",
+                        "headers":{
+                        }
+                    },
+                    "400":{
+                        "description":"Bad Request",
+                        "headers":{
+                        }
+                    }
+                }
+            }            
+        },   
+        "/restapi/v1/meet/profile/{propertyName}":{
+            "delete":{
+                "tags": [
+                    "Meet"
+                ], 
+                "summary": "Delete property of connected user",
+                "description": "This only works with an authenticated user",              
+                "consumes":[
+                ],
+                "produces":[
+                ],
+                "parameters":[
+                    {
+                        "type":"string",
+                        "name":"propertyName",
+                        "in":"path",
+                        "required":true
+                    }
+                ],
+                "responses":{
+                    "200":{
+                        "description":"OK",
+                        "headers":{
+                        }
+                    },
+                    "400":{
+                        "description":"Bad Request",
+                        "headers":{
+                        }
+                    }
+                }
+            }
+        },         
         "/restapi/v1/meet/sms/{source}/{destination}":{
             "post":{
                 "tags": [
@@ -5542,8 +5678,46 @@
                         "$ref":"#/definitions/Conversation"
                     }
                 }
+            }       
+        },
+        "Email":{
+            "properties":{
+                "to":{
+                    "type":"string"
+                },
+                "from":{
+                    "type":"string"
+                },
+                "subject":{
+                    "type":"string"
+                },            
+                "textBody":{
+                    "type":"string"
+                },
+                "htmlBody":{
+                    "type":"string"
+                },
+                "toName":{
+                    "type":"string"
+                },
+                "fromName":{
+                    "type":"string"
+                }
             }
         },
+        "Friend":{
+            "properties":{
+                "jid":{
+                    "type":"string"
+                },
+                "nickname":{
+                    "type":"string"
+                },
+                "groups":{
+                    "type":"string"
+                }
+            }
+        },        
         "EndpointEntity":{
             "properties":{
                 "callerName":{
@@ -5559,7 +5733,7 @@
                     "type":"string"
                 }
             }
-        },
+        },        
         "Feature":{
             "properties":{
                 "id":{
@@ -5582,7 +5756,7 @@
                     }
                 }
             }
-        },
+        },       
         "GroupEntities":{
             "properties":{
                 "groups":{

@@ -1087,7 +1087,7 @@ public class ChatService {
 
     private void authenticate(String username, String password) throws Exception
     {
-        Log.info("authenticate " + username + " " + password + " " + Password.passwords.get(username));
+        Log.info("authenticate " + username + " " + Password.passwords.get(username));
 
         if (Password.passwords.containsKey(username))     // SSO
         {

@@ -34,6 +34,7 @@
     String folder = ParamUtils.getParameter(request,"folder");
     String fastpath = ParamUtils.getParameter(request,"fastpath");   
     boolean fastpathauth = ParamUtils.getBooleanParameter(request,"fastpathauth");    
+    boolean smtpenabled = ParamUtils.getBooleanParameter(request,"smtpenabled");       
     int frequency = ParamUtils.getIntParameter(request,"frequency",0);
     boolean save = request.getParameter("save") != null;
     boolean test = request.getParameter("test") != null;
@@ -107,6 +108,7 @@
                 emailListener.setFrequency(frequency);
                 emailListener.setFastpathPrefix(fastpath);
                 emailListener.setFastpathAuthEnabled(fastpathauth);                
+                emailListener.setSmtpEnabled(smtpenabled);                  
 
                 // Restart the email listener service
                 emailListener.stop();
@@ -123,8 +125,9 @@
         password = emailListener.getPassword();
         folder = emailListener.getFolder();
         frequency = emailListener.getFrequency();
-    fastpath = emailListener.getFastpathPrefix(); 
-    fastpathauth = emailListener.isFastpathAuthEnabled();   
+        fastpath = emailListener.getFastpathPrefix(); 
+        fastpathauth = emailListener.isFastpathAuthEnabled();  
+        smtpenabled = emailListener.isSmtpEnabled();  
     }
 %>
 
@@ -281,7 +284,7 @@
 <form action="ofchat-email-listener.jsp" name="f" method="post">
 
     <div class="jive-contentBoxHeader">
-        Email listener settings
+        IMAP Email listener settings
     </div>
     <div class="jive-contentBox">
         <table width="80%" cellpadding="3" cellspacing="0" border="0">
@@ -359,10 +362,26 @@
         </tr>        
     </table>
     </div>
+    
+    <div class="jive-contentBoxHeader">
+        SMTP Email listener settings
+    </div>
+    <div class="jive-contentBox">
+        <table width="80%" cellpadding="3" cellspacing="0" border="0">
+        <tr>
+            <td width="30%" nowrap>
+                Enable:
+            </td>
+            <td nowrap>
+                <input type="checkbox" name="smtpenabled"<%= (smtpenabled) ? " checked" : "" %>>
+            </td>
+        </tr>
+    </table>
+    </div>    
 
-<input type="submit" name="save" value="Save">
-<input type="submit" name="test" value="Test Settings">
-</form>
+    <input type="submit" name="save" value="Save">
+    <input type="submit" name="test" value="Test Settings">
+    </form>
 <!-- END SMTP settings -->
 
 </body>

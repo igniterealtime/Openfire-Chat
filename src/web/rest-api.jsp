@@ -31,6 +31,9 @@
     String sms_enabled = request.getParameter("smsEnabled");    
     boolean smsEnabled = sms_enabled != null && sms_enabled.equals("on");
     
+    String email_enabled = request.getParameter("emailEnabled");    
+    boolean emailEnabled = email_enabled != null && email_enabled.equals("on");    
+    
     String adhoc_enabled = request.getParameter("adhocEnabled");    
     boolean adhocEnabled = adhoc_enabled != null && adhoc_enabled.equals("on");    
     
@@ -69,7 +72,8 @@
             
             boolean is2Reload = "custom".equals(httpAuth) || "custom".equals(plugin.getHttpAuth());
             plugin.setEnabled(enabled);
-            plugin.setSmsEnabled(smsEnabled);            
+            plugin.setEmailEnabled(emailEnabled);      
+            plugin.setSmsEnabled(smsEnabled);                
             plugin.setSmsProvider(smsProvider);            
             plugin.setAdhocEnabled(adhocEnabled);               
             plugin.setSwaggerSecure(swaggerSecure);                
@@ -96,7 +100,8 @@
     secret = plugin.getSecret();
     permission = plugin.getPermission();    
     enabled = plugin.isEnabled();
-    smsEnabled = plugin.isSmsEnabled();
+    emailEnabled = plugin.isEmailEnabled();
+    smsEnabled = plugin.isSmsEnabled();    
     smsProvider = plugin.getSmsProvider();
     adhocEnabled = plugin.isAdhocEnabled();    
     swaggerSecure = plugin.isSwaggerSecure();    
@@ -217,7 +222,9 @@
                     <textarea name="allowedIPs" cols="40" rows="3" wrap="virtual"><%=((allowedIPs != null) ? allowedIPs : "")%></textarea>
                     <br>
                     <br>
-                    
+
+                    <input type="checkbox" name="emailEnabled"<%= emailEnabled ? " checked" : "" %>>Email Routing   
+                    <br>                    
                     <input type="checkbox" name="smsEnabled"<%= smsEnabled ? " checked" : "" %>>SMS Routing enabled using &nbsp;
                     <select size="1" name="smsProvider" />
                          <option value="mexmo" <%= smsProvider.equals("mexmo") ? "selected" : "" %>>Mexmo</option>

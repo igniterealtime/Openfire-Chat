@@ -44,7 +44,7 @@ import org.xmpp.packet.Packet;
  */
 public class BookmarkInterceptor implements PacketInterceptor {
 
-	private static final Logger Log = LoggerFactory.getLogger(BookmarkInterceptor.class);
+    private static final Logger Log = LoggerFactory.getLogger(BookmarkInterceptor.class);
 
     /**
      * Initializes the BookmarkInterceptor and needed Server instances.
@@ -55,28 +55,32 @@ public class BookmarkInterceptor implements PacketInterceptor {
     public void interceptPacket(Packet packet, Session session, boolean incoming, boolean processed) throws PacketRejectedException {
         if (!processed && packet instanceof IQ && !incoming) {
 
-            // Check for the Bookmark Storage element and hand off to the Bookmark engine.
-            IQ iq = (IQ)packet;
-            Element childElement = iq.getChildElement();
-            if (childElement == null || iq.getType() != IQ.Type.result) {
-                return;
-            }
-
-            String namespace = childElement.getNamespaceURI();
-            if ("jabber:iq:private".equals(namespace)) {
-                // In private data, when a user is attempting to retrieve bookmark
-                // information, there will be a storage:bookmarks namespace.
-                Element storageElement = childElement.element("storage");
-                if (storageElement == null) {
+            try {
+                // Check for the Bookmark Storage element and hand off to the Bookmark engine.
+                IQ iq = (IQ)packet;
+                Element childElement = iq.getChildElement();
+                if (childElement == null || iq.getType() != IQ.Type.result) {
                     return;
                 }
 
-                namespace = storageElement.getNamespaceURI();
-                if ("storage:bookmarks".equals(namespace)) {
-                    // Append Server defined bookmarks for user.
-                    JID toJID = iq.getTo();
-                    addBookmarks(toJID, storageElement);
+                String namespace = childElement.getNamespaceURI();
+                if ("jabber:iq:private".equals(namespace)) {
+                    // In private data, when a user is attempting to retrieve bookmark
+                    // information, there will be a storage:bookmarks namespace.
+                    Element storageElement = childElement.element("storage");
+                    if (storageElement == null) {
+                        return;
+                    }
+
+                    namespace = storageElement.getNamespaceURI();
+                    if ("storage:bookmarks".equals(namespace)) {
+                        // Append Server defined bookmarks for user.
+                        JID toJID = iq.getTo();
+                        addBookmarks(toJID, storageElement);
+                    }
                 }
+            } catch (Exception e) {
+                Log.error("interceptPacket", e);
             }
         }
     }
@@ -104,20 +108,20 @@ public class BookmarkInterceptor implements PacketInterceptor {
      */
     private void addBookmarks(JID jid, Element storageElement) {
         try {
-        	final Collection<Bookmark> bookmarks = BookmarkManager.getBookmarks();
+            final Collection<Bookmark> bookmarks = BookmarkManager.getBookmarks();
 
-			for (Bookmark bookmark : bookmarks) {
-				// Check to see if the bookmark should be appended for this
-				// particular user.
-				boolean addBookmarkForUser = bookmark.isGlobalBookmark() || isBookmarkForJID(jid, bookmark);
-				if (addBookmarkForUser) {
-					// Add bookmark element.
-					addBookmarkElement(jid, bookmark, storageElement);
-				}
-			}
-		} catch (Exception e) {
-			Log.error("addBookmarks", e);
-		}
+            for (Bookmark bookmark : bookmarks) {
+                // Check to see if the bookmark should be appended for this
+                // particular user.
+                boolean addBookmarkForUser = bookmark.isGlobalBookmark() || isBookmarkForJID(jid, bookmark);
+                if (addBookmarkForUser) {
+                    // Add bookmark element.
+                    addBookmarkElement(jid, bookmark, storageElement);
+                }
+            }
+        } catch (Exception e) {
+            Log.error("addBookmarks", e);
+        }
     }
 
     /**
@@ -206,9 +210,9 @@ public class BookmarkInterceptor implements PacketInterceptor {
                     conferenceElement.addAttribute("jid", bookmark.getValue());
                     boolean nameasnick = Boolean.valueOf(bookmark.getProperty("nameasnick"));
                     if (nameasnick) {
-                    	User currentUser = userManager.getUser(jid.getNode());
-                    	Element nick = conferenceElement.addElement("nick");
-                    	nick.addText(currentUser.getName());
+                        User currentUser = userManager.getUser(jid.getNode());
+                        Element nick = conferenceElement.addElement("nick");
+                        nick.addText(currentUser.getName());
                     }
                 }
                 appendSharedElement(conferenceElement);
