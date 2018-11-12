@@ -1322,6 +1322,7 @@ public class EmailListener {
         String plainText = null;
         String htmlText = null;
         String result = null;
+        String attachments = "";
 
         int count = mimeMultipart.getCount();
 
@@ -1343,8 +1344,36 @@ public class EmailListener {
             } else if (bodyPart.getContent() instanceof MimeMultipart){
                 result = getTextFromMimeMultipart((MimeMultipart)bodyPart.getContent());
             }
+            else {
+                String fileName = bodyPart.getFileName();
+                Object o = bodyPart.getContent();
+
+                if (fileName != null && o instanceof InputStream)
+                {
+                    Log.info("Found attachment " + fileName);
+
+                    OutputStream output = new FileOutputStream(downloadHome + File.separator + fileName);
+
+                    try {
+                        InputStream is = (InputStream) o;
+                        byte[] buffer = new byte[8 * 1024];
+                        int bytesRead;
+
+                        while ((bytesRead = is.read(buffer)) != -1)
+                        {
+                            output.write(buffer, 0, bytesRead);
+                        }
+
+                    } finally  {
+                        output.close();
+                    }
+
+                    String rootUrlPlain = JiveGlobals.getProperty("ofmeet.root.url.plain", "http://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + JiveGlobals.getProperty("httpbind.port.plain", "7070"));
+                    attachments = attachments + rootUrlPlain + "/ofmeet-cdn/download/" + fileName + " \n" ;
+                }
+            }
         }
-        return result == null ? (htmlText == null ? plainText : htmlText) : result;
+        return attachments + (result == null ? (htmlText == null ? plainText : htmlText) : result);
     }
 /*
 

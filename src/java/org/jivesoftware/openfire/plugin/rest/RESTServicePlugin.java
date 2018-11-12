@@ -487,6 +487,10 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
      */
     public void destroyPlugin() {
 
+        try {
+            OpenfireConnection.removeAllConnections();
+        } catch (Exception e) {}
+
         if (adminConnection != null) adminConnection.close();
 
         PropertyEventDispatcher.removeListener(this);

@@ -261,6 +261,15 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
         return users.get(username);
     }
 
+    public static void removeAllConnections() throws SmackException
+    {
+        for (String streamId : connections.keySet())
+        {
+           removeConnection(streamId);
+        }
+    }
+
+
     public static OpenfireConnection removeConnection(String streamId) throws SmackException
     {
         OpenfireConnection connection = connections.remove(streamId);
