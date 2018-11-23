@@ -58,9 +58,9 @@ public class OfChatSaslServer implements SaslServer
         }
 
         final String username = tokens.nextToken();
-        final String totp = tokens.nextToken().trim();
+        final String token = tokens.nextToken().trim();
 
-        Log.debug("OFCHAT authentication " + username + ":" + totp);
+        Log.debug("OFCHAT authentication " + username + ":" + token);
 
         try {
             User user = XMPPServer.getInstance().getUserManager().getUser(username);
@@ -72,21 +72,21 @@ public class OfChatSaslServer implements SaslServer
             {
                 String code = TimeBasedOneTimePasswordUtil.generateCurrentNumberString(base32Secret);
 
-                if (!totp.equals(code))
+                if (!token.equals(code))
                 {
-                    Log.debug("code=" + code + ", totp=" + totp);
+                    Log.debug("code=" + code + ", token=" + token);
 
                     // exception to be fixed when single Pade xmpp session is implemented
                     // allow old TOTP code if existing session used it.
 
-                    if (SessionManager.getInstance().getSessions(username).size() == 0 || passcode == null || !totp.equals(passcode))
+                    if (SessionManager.getInstance().getSessions(username).size() == 0 || passcode == null || !token.equals(passcode))
                     {
                        throw new SaslException("TOTP authentication failure");
                     }
                 }
 
-                Log.debug( "Authentication successful for user " + username + ", code=" + code + ", totp=" + totp);
-                user.getProperties().put("ofchat.totp.passcode", totp);
+                Log.debug( "Authentication successful for user " + username + ", code=" + code + ", token=" + token);
+                user.getProperties().put("ofchat.totp.passcode", token);
 
             } else {
 
@@ -94,9 +94,9 @@ public class OfChatSaslServer implements SaslServer
                 {
                     String passkey = Password.passwords.get(username).trim();
 
-                    Log.debug("OFCHAT winsso authentication " + totp + " " + passkey);
+                    Log.debug("OFCHAT winsso authentication " + token + " " + passkey);
 
-                    if (!totp.equals(passkey))
+                    if (!token.equals(passkey))
                     {
                        throw new SaslException("Windows SSO authentication failure");
                     }

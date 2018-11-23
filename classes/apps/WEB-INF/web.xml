@@ -12,5 +12,15 @@
     <servlet-mapping>
         <servlet-name>nexmo</servlet-name>
         <url-pattern>/sms</url-pattern>
+    </servlet-mapping>  
+    
+    <servlet>
+        <servlet-name>smartidcard</servlet-name>
+        <servlet-class>org.ifsoft.sso.SmartIdCard</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>smartidcard</servlet-name>
+        <url-pattern>/smartidcard</url-pattern>
     </servlet-mapping>       
 </web-app>

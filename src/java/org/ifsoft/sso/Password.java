@@ -108,17 +108,16 @@ public class Password extends HttpServlet
                     }
                 }
             }
-
-            writeHeader(response);
-            response.getOutputStream().println("error:error");
-            return;
         }
         catch(Exception e5) {
             Log.error("Password Servlet Error", e5);
         }
+
+        writeHeader(response);
+        response.getOutputStream().println("error:error");
     }
 
-    private void writeHeader(HttpServletResponse response) throws Exception
+    private void writeHeader(HttpServletResponse response)
     {
         response.setHeader("Expires", "Sat, 6 May 1995 12:00:00 GMT");
         response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
