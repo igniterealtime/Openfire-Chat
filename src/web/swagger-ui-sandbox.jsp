@@ -35,7 +35,7 @@
     String port = JiveGlobals.getBooleanProperty("ofchat.swagger.secure", false) ? JiveGlobals.getProperty("httpbind.port.secure", "7443") : JiveGlobals.getProperty("httpbind.port.plain", "7070");
     String protocol = JiveGlobals.getBooleanProperty("ofchat.swagger.secure", false) ? "https://" : "http://";
     
-    String url = protocol + hostname + ":" + port + "/swagger";    
+    String url = JiveGlobals.getProperty("ofmeet.root.url.secure", protocol + hostname + ":" + port) + "/swagger";    
 %>
 
 <html>

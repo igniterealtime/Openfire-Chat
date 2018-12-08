@@ -45,6 +45,7 @@ import net.sf.json.*;
 public class MeetService {
 
     private static final Logger Log = LoggerFactory.getLogger(MeetService.class);
+    private static final String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
     private MeetController meetController;
 
     @Context
@@ -172,10 +173,10 @@ public class MeetService {
 
     @POST
     @Path("/action/{action}/{callId}")
-    public Response performAction(@PathParam("action") String action, @PathParam("callId") String callId) throws ServiceException
+    public Response performAction(@PathParam("action") String action, @PathParam("callId") String callId, @QueryParam("destination") String destination) throws ServiceException
     {
         try {
-            if (meetController.performAction(action, callId))
+            if (meetController.performAction(action, callId, destination))
             {
                 return Response.status(Response.Status.OK).build();
             }
@@ -242,6 +243,57 @@ public class MeetService {
     //  Custom Profile update/delete. Use chat/users to fetch
     //
     //-------------------------------------------------------
+
+    @GET
+    @Path("/profile/{criteria}")
+    public String getUserProfiles(@PathParam("criteria") String criteria) throws ServiceException
+    {
+        try {
+            UserManager userManager = UserManager.getInstance();
+            Set<String> searchFields = userManager.getSearchFields();
+            Set<User> users = new HashSet<User>();
+
+            Collection<User> foundUsers = new ArrayList<User>();
+
+            for (String searchField : searchFields)
+            {
+                foundUsers.addAll(userManager.findUsers(new HashSet<String>(Arrays.asList(searchField)), criteria));
+            }
+
+            JSONArray profiles = new JSONArray();
+            int i=0;
+
+            for (User user : foundUsers)
+            {
+                if (user != null)
+                {
+                    JSONObject profileProperties = new JSONObject();
+
+                    profileProperties.put("username", user.getUsername());
+                    profileProperties.put("name", user.getName());
+                    profileProperties.put("email", user.getEmail());
+                    profileProperties.put("jid", user.getUsername() + "@" + domain);
+
+                    for (String key : user.getProperties().keySet())
+                    {
+                        Log.info("getUserProperty " + key + " " + user.getProperties().get(key));
+
+                        if (!key.startsWith("ofchat.blast."))
+                        {
+                            profileProperties.put(key, user.getProperties().get(key));
+                        }
+                    }
+
+                    profiles.put(i++, profileProperties);
+                }
+            }
+
+            return profiles.toString();
+
+        } catch (Exception e) {
+            throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+        }
+    }
 
     @POST
     @Path("/profile")

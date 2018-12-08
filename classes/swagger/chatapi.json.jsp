@@ -3290,8 +3290,8 @@
         "tags": [
             "Meet"
         ],  
-        "summary": "Perform a telephone action like clear on active call",
-        "description": "Supported actions include: clear",              
+        "summary": "Perform a telephone action like clear or transfer on active call",
+        "description": "Supported actions include: clear, transfer",              
                 "consumes":[
                 ],
                 "produces":[
@@ -3308,7 +3308,13 @@
                         "name":"callId",
                         "in":"path",
                         "required":true
-                    }
+                    },
+                    {
+                        "type":"string",
+                        "name":"destination",
+                        "in":"query",
+                        "required":false
+                    }                    
                 ],
                 "responses":{
                     "200":{
@@ -3643,6 +3649,42 @@
                     "200":{
                         "description":"OK",
                         "headers":{
+                        }
+                    },
+                    "400":{
+                        "description":"Bad Request",
+                        "headers":{
+                        }
+                    }
+                }
+            }
+        },         
+        "/restapi/v1/meet/profile/{criteria}":{
+            "get":{
+                "tags": [
+                    "Meet"
+                ], 
+                "summary": "Fetches all profile properties of a user",
+                "description": "",              
+                "consumes":[
+                ],
+                "produces":[
+                ],
+                "parameters":[
+                    {
+                        "type":"string",
+                        "name":"criteria",
+                        "in":"path",
+                        "required":true
+                    }
+                ],
+                "responses":{
+                    "200":{
+                        "description":"OK",
+                        "headers":{
+                        },
+                        "schema":{
+                            "type":"string"
                         }
                     },
                     "400":{

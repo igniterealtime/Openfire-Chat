@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="bootstrap.min.css">
+    <link rel="stylesheet" href="dialpad.css">
+    <link rel="stylesheet" href="candybar.css">
+
+    <script src="jquery_1_4_2.js"></script>
+    <script src="strophe.js"></script>
+    <script src="rayo-plugin.js"></script>
+
+    <script src="candybar.js"></script>
+    <script src="att.phonenumber.js"></script>
+    <script src="dialpad.js"></script>
+    <script>
+
+    var avatar = 'unknown.jpg';
+    var domain = location.hostname;
+    var jid = window.location.hostname;
+
+    var ringtone;
+    var username = "admin";
+    var password = "admin";
+    var sipHandset = "1002";
+
+
+    window.dialer = new Dialpad({
+        onPress: function (key) {
+            console.debug('a key was pressed', key);
+
+            if (window.candybar.call) window.candybar.call.digit(key);
+        },
+        onCallableNumber: function (number) {
+            //console.log('we have a number that seems callable', number);
+            //makeCall(number);
+        },
+        onHide: function () {
+            console.debug('removed it');
+        },
+        onHangup: function (number) {
+
+            window.candybar.call.hangup();
+        },
+
+        onCall: function (number) {
+
+            if (window.dialer.getCallLabel() == "Call") {
+                console.debug('The call button was pressed', number);
+                makeCall(number);
+
+            } else if (window.dialer.getCallLabel() == "Hangup") {
+                window.candybar.call.hangup();
+
+            } else if (window.dialer.getCallLabel() == "Answer") {
+                window.candybar.call.answer();
+
+            } else if (window.dialer.getCallLabel() == "Join") {
+                window.candybar.call.join();
+
+            } else if (window.dialer.getCallLabel() == "Leave") {
+                window.candybar.call.leave();
+
+            } else if (window.dialer.getCallLabel() == "Unhold") {
+                window.candybar.call.hold();
+
+            } else if (window.dialer.getCallLabel() == "Unmute") {
+                window.candybar.call.mute(false);
+
+            } else if (window.dialer.getCallLabel() == "Private") {
+                window.candybar.call.private();
+
+            } else if (window.dialer.getCallLabel() == "Public") {
+                window.candybar.call.private();
+
+            } else {
+                console.error('bad call state');
+            }
+        }
+    });
+
+    window.candybar = new CandyBar();
+
+    $(document).ready(function()
+    {
+        document.body.insertBefore(window.dialer.render(), document.body.firstChild);
+
+        window.candybar.render();
+        window.candybar.call = null;
+
+        if (urlParam("domain")) domain = urlParam("domain");
+        if (urlParam("username")) username = urlParam("username");
+        if (urlParam("password")) password = urlParam("password");
+        if (urlParam("handset")) sipHandset = urlParam("handset");
+
+        if (username && password)
+        {
+            jid = username + "@" + window.location.hostname
+        }
+
+        window.connection = new Strophe.Connection('https://' + window.location.host + '/http-bind/');
+        window.connection.resource = Math.random().toString(36).substr(2,9);
+
+        window.connection.connect(jid, password, function (status)
+        {
+            console.log("XMPPConnection.connect");
+            console.log(status);
+
+            if (status === Strophe.Status.CONNECTED)
+            {
+                $("#status").html("Ready");
+                window.connection.send($pres());
+
+                $(window).unload( function() {
+                    window.connection.disconnect();
+                });
+
+                setPhone();
+
+                var destination = urlParam("destination");
+
+                if (destination)
+                {
+                    makeCall(destination);
+                }
+            }
+        });
+    })
+
+
+   function setPhone()
+   {
+        console.debug("setPhone()");
+
+        if (window.connection)
+        {
+            window.connection.rayo.phone(
+            {
+                codec_name: "default",
+                stereo_pan: "0",
+
+                offHook: function() {
+                    $("#status").html("Off Hook");
+                },
+
+                onHook: function() {
+                    $("#status").html("On Hook");
+                },
+
+                offSpeaking: function() {
+                    $("#status").html("Stopped Speaking");
+                },
+
+                onSpeaking: function() {
+                    $("#status").html("Started Speaking");
+                },
+
+                onAccept: function(call) {
+
+                    window.candybar.call = call;
+                },
+
+                onOffer: function(call, headers) {
+                    console.debug('onOffer ' + call.from);
+                    console.debug(headers);
+
+                    if (window.candybar.call == null)   // ignore when user has active call
+                    {
+                        var cli = headers.caller_name ? headers.caller_name : call.from;
+
+                        window.candybar.setUser({
+                            name: cli,
+                            number: cli,
+                            picUrl: 'unknown.jpg'
+                        });
+
+                        window.candybar.call = call;
+                        window.candybar.setState('incoming');
+                        window.dialer.setCallLabel('Answer');
+                    }
+
+                    startTone("Diggztone_Vibe");
+                },
+
+                onEnd: function(callId, headers) {
+                    console.debug('onEnd ' + callId);
+                    console.debug(headers);
+
+                    window.candybar.endGently();
+                    window.candybar.call = null;
+
+                    window.dialer.setCallLabel('Call');
+                    stopTone();
+                },
+
+                onAnswer: function(callId, headers) {
+                    console.debug('onAnswer ' + callId);
+                    console.debug(headers);
+
+                    window.candybar.setState('active');
+                    window.dialer.setCallLabel('Hangup');
+                    stopTone();
+                },
+
+                onBusy: function(call, headers) {
+                    console.debug('onBusy ' + call.id);
+                    console.debug(headers);
+
+                    window.candybar.setState('inactive');
+
+                    var cli = headers.caller_name ? headers.caller_name : call.from;
+
+                    window.candybar.setUser({
+                        name: cli,
+                        number: cli,
+                        picUrl: 'unknown.jpg'
+                    });
+
+                    window.candybar.call = call;
+                    window.candybar.setState('busy');
+                    window.dialer.setCallLabel('Join');
+                    stopTone();
+                },
+
+                onHold: function(callId) {
+                    console.debug('onHold ' + callId);
+
+                    window.candybar.setState('held');
+                    window.dialer.setCallLabel('Unhold');
+                },
+
+                onRing: function(callId, headers) {
+                    console.debug('onRing ' + callId);
+                    console.debug(headers);
+
+                    window.candybar.setState('calling');
+                    startTone("ringback-uk");
+                },
+
+                onJoin: function(callId, jid, mixer) {
+                    console.debug('onJoin ' + jid + " " + mixer + " " + callId);
+
+                    window.candybar.setState('conferenced');
+                    window.dialer.setCallLabel('Leave');
+                },
+
+                onUnjoin: function(callId, jid, mixer) {
+                    console.debug('onUnjoin ' + jid + " " + mixer + " " + callId);
+                },
+
+                onMute: function(callId) {
+                    console.debug('onMute ' + callId);
+
+                    window.candybar.setState('muted');
+                    window.dialer.setCallLabel('Unmute');
+                },
+
+                offMute: function(callId) {
+                    console.debug('offMute ' + callId);
+
+                    window.candybar.setState('active');
+                    window.dialer.setCallLabel('Hangup');
+                },
+
+                onPrivate: function(callId) {
+                    console.debug('onPrivate ' + callId);
+
+                    window.candybar.call.privateCall = true;
+                    window.dialer.setCallLabel('Public');
+                },
+
+                offPrivate: function(callId) {
+                    console.debug('offPrivate ' + callId);
+
+                    window.candybar.call.privateCall = false;
+                    window.dialer.setCallLabel('Hangup');
+                },
+
+                onRedirect: function(callId) {
+                    console.debug('onRedirect ' + callId);
+
+                    window.candybar.endGently();
+                    window.dialer.setCallLabel('Call');
+                    stopTone();
+                },
+
+                onRedirecting: function(callId) {
+                    console.log('onRedirecting ' + callId);
+                },
+
+                onRedirected: function(callId) {
+                    console.debug('onRedirected ' + callId);
+                },
+
+                onSay: function(saying) {
+                    console.debug('Started saying ' + saying.sayId);
+
+                    window.candybar.call.saying = saying;
+                },
+
+                onSayComplete: function(sayId) {
+                    console.log('Finished saying ' + sayId);
+
+                    window.candybar.call.saying = null;
+                },
+
+                onError: function(e) {
+
+                    console.error(e);
+                }
+            });
+        }
+   }
+
+   function makeCall(destination)
+   {
+        console.log("makeCall " + destination);
+
+        window.connection.rayo.dial(sipHandset, destination, {
+            codec_name: "default",
+            group_name: "default"
+        });
+
+        window.candybar.setUser({
+            name: destination,
+            number: destination,
+            picUrl: 'unknown.jpg'
+        });
+    }
+
+    function urlParam(name)
+    {
+        var results = new RegExp('[\\?&]' + name + '=([^&#]*)').exec(window.location.href);
+        if (!results) { return undefined; }
+        return decodeURIComponent(results[1]) || undefined;
+    }
+
+    function startTone(name)
+    {
+        if (!ringtone)
+        {
+            ringtone = new Audio();
+            ringtone.loop = true;
+            ringtone.src = "ringtones/" + name + ".mp3";
+            ringtone.play();
+        }
+    }
+
+    function stopTone()
+    {
+        if (ringtone)
+        {
+            ringtone.pause();
+            ringtone = null;
+        }
+    }
+
+    </script>
+  </head>
+  <body style="position: absolute; width: 500px: height: 300px;">
+    <span id="status">Loading...</span>
+  </body>
+</html>

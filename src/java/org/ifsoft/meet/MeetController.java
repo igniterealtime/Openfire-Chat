@@ -15,7 +15,7 @@ import org.jivesoftware.openfire.session.*;
 import org.xmpp.packet.*;
 import org.jivesoftware.openfire.plugin.rawpropertyeditor.RawPropertyEditor;
 import org.jivesoftware.openfire.plugin.rest.RESTServicePlugin;
-
+import org.jivesoftware.openfire.plugin.rest.dao.PropertyDAO;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +43,7 @@ public class MeetController {
     private final ConcurrentHashMap<String, String> callIds = new ConcurrentHashMap<String, String>();
     private final ConcurrentHashMap<String, String> droppedCalls = new ConcurrentHashMap<String, String>();
     private final ConcurrentHashMap<String, String> makeCalls = new ConcurrentHashMap<String, String>();
+    private final ConcurrentHashMap<String, JSONObject> callList = new ConcurrentHashMap<String, JSONObject>();
     private final ConcurrentHashMap<String, ExpectedCall> expectedCalls = new ConcurrentHashMap<String, ExpectedCall>();
 
     /**
@@ -64,14 +65,29 @@ public class MeetController {
      * perform action on active call
      *
      */
-    public boolean performAction(String action, String callId)
+    public boolean performAction(String action, String callId, String destination)
     {
+        Log.debug("performAction " + action + " " + callId + " " + destination + " " + callList.get(callId));
+
         boolean processed = false;
 
         if ("clear".equals(action) && RESTServicePlugin.getInstance().sendAsyncFWCommand("uuid_kill " + callId) != null)
         {
             processed = true;
         }
+        else
+
+        if ("hold".equals(action) && RESTServicePlugin.getInstance().sendAsyncFWCommand("uuid_hold toggle " + callId) != null)
+        {
+            processed = true;
+        }
+        else
+
+        if ("transfer".equals(action) && RESTServicePlugin.getInstance().sendAsyncFWCommand("uuid_transfer " + callId + " -bleg " + destination) != null)
+        {
+            processed = true;
+        }
+
         return processed;
     }
 
@@ -85,7 +101,7 @@ public class MeetController {
 
         String callId = "makecall-" + System.currentTimeMillis() + "-" + user + "-" + destination;
         String sipDomain = JiveGlobals.getProperty("freeswitch.sip.hostname", RESTServicePlugin.getInstance().getIpAddress());
-        String command = "originate {sip_from_user='" + user + "',origination_uuid=" + callId + "}[sip_invite_params=intercom=true,sip_h_Call-Info=<sip:" + sipDomain + ">;answer-after=0,sip_auto_answer=true]sofia/" + sipDomain + "/" + user + " " + destination;
+        String command = "originate {presence_id=" + user + "@" + sipDomain + ",origination_caller_id_name='" + destination + "',origination_caller_id_number='" + destination + "',sip_from_user='" + user + "',origination_uuid=" + callId + "}[sip_invite_params=intercom=true,sip_h_Call-Info=<sip:" + sipDomain + ">;answer-after=0,sip_auto_answer=true]user/" + user + " " + destination;
 
         makeCalls.put(callId, destination);
 
@@ -109,6 +125,7 @@ public class MeetController {
                 Log.warn("makeCall timeout \n" + command);
             }
         }
+
         makeCalls.remove(callId);
         return "";
     }
@@ -213,20 +230,27 @@ public class MeetController {
      * event from freeswitch
      *
      */
-    public void sendSipEvent(String roomName, String source, String callId, String eventName)
+    public void sendSipEvent(String source, String destination, JSONObject callJson)
     {
-        String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
+        try {
+            List<String> sources = PropertyDAO.getUsernameByProperty("caller_id_number", source);
+            List<String> destinations = PropertyDAO.getUsernameByProperty("caller_id_number", destination);
 
-        JSONObject event = new JSONObject();
-        event.put("event", eventName);
-        event.put("conference", roomName);
-        event.put("source", source);
-        event.put("id", callId);
+            if (sources.size() > 0 || destinations.size() > 0)
+            {
+                String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
 
-        Message message = new Message();
-        message.setFrom(domain);
-        message.addChildElement("ofmeet", "jabber:x:ofmeet").setText(event.toString());
-        XMPPServer.getInstance().getSessionManager().broadcast(message);
+                Message message = new Message();
+                message.setFrom(domain);
+                message.addChildElement("ofswitch", "jabber:x:ofswitch").setText(callJson.toString());
+
+                if (sources.size() > 0) XMPPServer.getInstance().getSessionManager().userBroadcast(sources.get(0), message);
+                if (destinations.size() > 0) XMPPServer.getInstance().getSessionManager().userBroadcast(destinations.get(0), message);
+            }
+
+        } catch (Exception e) {
+            Log.error("sendSipEvent", e);
+        }
     }
 
     /**
@@ -235,15 +259,51 @@ public class MeetController {
      */
     public void callStateEvent(Map<String, String> headers)
     {
-        String callState = headers.get("Channel-Call-State");
-        String origCallState = headers.get("Original-Channel-Call-State");
-        String callDirection = headers.get("Call-Direction");
-        String source = headers.get("Caller-Caller-ID-Number");
-        String destination = headers.get("Caller-Destination-Number");
-
+        final String callState = headers.get("Channel-Call-State");
+        final String origCallState = headers.get("Original-Channel-Call-State");
+        final String callDirection = headers.get("Call-Direction");
+        final String source = headers.get("Caller-Caller-ID-Number");
+        final String destination = headers.get("Caller-Destination-Number");
+        final String otherCallId = headers.get("Other-Leg-Unique-ID");
         final String callId = headers.get("Caller-Unique-ID");
 
-        Log.debug("callStateEvent " + callState + " " + origCallState + " " + destination + " " + source + " " + callId + " " + callDirection);
+        Log.info("callStateEvent " + callState + " " + origCallState + " " + destination + " " + source + " " + callId + " " + otherCallId + " " + callDirection);
+
+        if ("ACTIVE".equals(callState) || "HANGUP".equals(callState) || "RINGING".equals(callState) || "HELD".equals(callState))
+        {
+            JSONObject callJson = new JSONObject();
+            callJson.put("state", callState);
+            callJson.put("prev_state", origCallState);
+            callJson.put("direction", callDirection);
+            callJson.put("source", source);
+            callJson.put("destination", destination);
+            callJson.put("other_call_id", otherCallId);
+            callJson.put("call_id", callId);
+
+            if ("ACTIVE".equals(callState))
+            {
+                makeCalls.remove(callId);
+
+                callList.put(callId, callJson);
+                sendSipEvent(source, destination, callJson);
+            }
+            else
+
+            if ("HANGUP".equals(callState))
+            {
+                callList.remove(callId);
+                sendSipEvent(source, destination, callJson);
+            }
+
+            else
+
+            if (("RINGING".equals(callState) && "outbound".equals(callDirection)) || "HELD".equals(callState))
+            {
+                sendSipEvent(source, destination, callJson);
+            }
+        }
+
+        // flash-call
 
         if ("RINGING".equals(callState) && "inbound".equals(callDirection))
         {
@@ -256,14 +316,6 @@ public class MeetController {
 
                 RESTServicePlugin.getInstance().sendAsyncFWCommand(command);
             }
-        }
-        else
-
-        if ("DOWN".equals(origCallState) && "ACTIVE".equals(callState) && "outbound".equals(callDirection))
-        {
-            // make call (originate)
-
-            makeCalls.remove(callId);
         }
         else
 
