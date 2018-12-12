@@ -1657,6 +1657,80 @@
                     }
                 }
             }
+        },          
+        "/restapi/v1/chat/{username}/pdf":{
+            "get":{
+                "tags": [
+                    "Chat"
+                ],  
+                "summary": "Retrieve old archived mesages into a PDF file",
+                "description": "This operation requires the monitoring plugin to work. It performs a database seaach using the supplied parameters or list of keywords and generates a PDF for the output",                    
+                "consumes":[
+                ],
+                "produces":[
+                    "application/pdf"
+                ],
+                "parameters":[
+                    {
+                        "type":"string",
+                        "name":"username",
+                        "in":"path",
+                        "required":true
+                    },
+                    {
+                        "type":"string",
+                        "name":"end",
+                        "in":"query",
+                        "required":false
+                    },
+                    {
+                        "type":"string",
+                        "name":"keywords",
+                        "in":"query",
+                        "required":false
+                    },
+                    {
+                        "type":"string",
+                        "name":"room",
+                        "in":"query",
+                        "required":false
+                    },
+                    {
+                        "type":"string",
+                        "name":"service",
+                        "in":"query",
+                        "required":false
+                    },
+                    {
+                        "type":"string",
+                        "name":"start",
+                        "in":"query",
+                        "required":false
+                    },
+                    {
+                        "type":"string",
+                        "name":"to",
+                        "in":"query",
+                        "required":false
+                    },
+                    {
+                        "name":"body",
+                        "in":"body",
+                        "required":false,
+                        "schema":{
+                            "type":"string"
+                        }
+                    }                    
+                ],
+                "responses":{
+                    "200":{
+                        "description":"OK",
+                        "type": "file",
+                        "headers":{
+                        }
+                    }
+                }
+            }
         },        
         "/restapi/v1/chat/{streamid}/messages/{to}":{
             "post":{

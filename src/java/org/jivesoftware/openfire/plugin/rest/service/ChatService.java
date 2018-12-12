@@ -21,6 +21,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.StreamingOutput;
 
 import java.security.Principal;
 
@@ -72,6 +73,7 @@ import de.mxro.process.*;
 
 import org.ifsoft.sso.Password;
 import org.jitsi.util.OSUtils;
+import org.jivesoftware.openfire.archive.ConversationPDFServlet;
 
 @Path("restapi/v1/chat")
 public class ChatService {
@@ -417,6 +419,21 @@ public class ChatService {
     }
 
     @GET
+    @Path("/{username}/pdf")
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    public Response getConversationsPdf(@PathParam("username") String username, @QueryParam("keywords") String keywords, @QueryParam("to") String to, @QueryParam("start") String start, @QueryParam("end") String end, @QueryParam("room") String room, @DefaultValue("conference") @QueryParam("service") String service, String password) throws ServiceException
+    {
+        StreamingOutput output = new StreamingOutput()
+        {
+            @Override public void write(OutputStream out)
+            {
+                ConversationPDFServlet.doSearch(out, username, keywords, to, start, end, room, service);
+            }
+        };
+        return Response.ok(output).build();
+    }
+
+    @GET
     @Path("/{username}/messages")
     @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
     public Conversations getConversations(@PathParam("username") String username, @QueryParam("keywords") String keywords, @QueryParam("to") String to, @QueryParam("start") String start, @QueryParam("end") String end, @QueryParam("room") String room, @DefaultValue("conference") @QueryParam("service") String service, String password) throws ServiceException
@@ -436,11 +453,8 @@ public class ChatService {
                     String[] usernameAndPassword = BasicAuth.decode(token.substring(6));
                     usernameAndPassword = BasicAuth.decode(token);
 
-                    if (usernameAndPassword != null && usernameAndPassword.length == 2)
+                    if (usernameAndPassword == null || usernameAndPassword.length != 2 || !usernameAndPassword[0].equals(username))
                     {
-                        authenticate( usernameAndPassword[0], usernameAndPassword[1] );
-
-                    } else {
                         throw new ServiceException("Exception", "not authorized", ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
                     }
                  }  // else ok
