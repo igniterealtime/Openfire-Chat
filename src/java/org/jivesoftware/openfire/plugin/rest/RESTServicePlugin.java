@@ -183,7 +183,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
         SessionEventDispatcher.addListener(this);
 
-        secret = JiveGlobals.getProperty("plugin.restapi.secret", "");
+        secret = JiveGlobals.getProperty("plugin.ofchat.secret", "");
 
         // If no secret key has been assigned, assign a random one.
         if ("".equals(secret)) {
@@ -191,7 +191,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             setSecret(secret);
         }
 
-        permission = JiveGlobals.getProperty("plugin.restapi.permission", "");
+        permission = JiveGlobals.getProperty("plugin.ofchat.permission", "");
 
         // If no permission key has been assigned, assign a random one.
         if ("".equals(permission)) {
@@ -202,10 +202,10 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         Log.info("Initialize REST");
 
         // See if Custom authentication filter has been defined
-        customAuthFilterClassName = JiveGlobals.getProperty("plugin.restapi.customAuthFilter", "");
+        customAuthFilterClassName = JiveGlobals.getProperty("plugin.ofchat.customAuthFilter", "");
 
         // See if the service is enabled or not.
-        enabled = JiveGlobals.getBooleanProperty("plugin.restapi.enabled", false);
+        enabled = JiveGlobals.getBooleanProperty("plugin.ofchat.enabled", false);
         smsEnabled = JiveGlobals.getBooleanProperty("ofchat.sms.enabled", false);
         emailEnabled = JiveGlobals.getBooleanProperty("ofchat.email.enabled", false);
         smsProvider = JiveGlobals.getProperty("ofchat.sms.provider", "mexmo");
@@ -213,11 +213,11 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         swaggerSecure = JiveGlobals.getBooleanProperty("ofchat.swagger.secure", false);
 
         // See if the HTTP Basic Auth is enabled or not.
-        httpAuth = JiveGlobals.getProperty("plugin.restapi.httpAuth", "basic");
+        httpAuth = JiveGlobals.getProperty("plugin.ofchat.httpAuth", "basic");
 
         // Get the list of IP addresses that can use this service. An empty list
         // means that this filter is disabled.
-        allowedIPs = StringUtils.stringToCollection(JiveGlobals.getProperty("plugin.restapi.allowedIPs", ""));
+        allowedIPs = StringUtils.stringToCollection(JiveGlobals.getProperty("plugin.ofchat.allowedIPs", ""));
 
         // Listen to system property events
         PropertyEventDispatcher.addListener(this);
@@ -649,7 +649,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
      *            the secret key.
      */
     public void setSecret(String secret) {
-        JiveGlobals.setProperty("plugin.restapi.secret", secret);
+        JiveGlobals.setProperty("plugin.ofchat.secret", secret);
         this.secret = secret;
     }
 
@@ -669,7 +669,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
      *            the permission key.
      */
     public void setPermission(String permission) {
-        JiveGlobals.setProperty("plugin.restapi.permission", permission);
+        JiveGlobals.setProperty("plugin.ofchat.permission", permission);
         this.permission = permission;
     }
 
@@ -708,7 +708,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
      * @param allowedIPs the new allowed i ps
      */
     public void setAllowedIPs(Collection<String> allowedIPs) {
-        JiveGlobals.setProperty("plugin.restapi.allowedIPs", StringUtils.collectionToString(allowedIPs));
+        JiveGlobals.setProperty("plugin.ofchat.allowedIPs", StringUtils.collectionToString(allowedIPs));
         this.allowedIPs = allowedIPs;
     }
 
@@ -731,7 +731,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
      */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
-        JiveGlobals.setProperty("plugin.restapi.enabled", enabled ? "true" : "false");
+        JiveGlobals.setProperty("plugin.ofchat.enabled", enabled ? "true" : "false");
     }
 
     public boolean isEmailEnabled() {
@@ -795,22 +795,22 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
      */
     public void setHttpAuth(String httpAuth) {
         this.httpAuth = httpAuth;
-        JiveGlobals.setProperty("plugin.restapi.httpAuth", httpAuth);
+        JiveGlobals.setProperty("plugin.ofchat.httpAuth", httpAuth);
     }
 
     /* (non-Javadoc)
      * @see org.jivesoftware.util.PropertyEventListener#propertySet(java.lang.String, java.util.Map)
      */
     public void propertySet(String property, Map<String, Object> params) {
-        if (property.equals("plugin.restapi.secret")) {
+        if (property.equals("plugin.ofchat.secret")) {
             this.secret = (String) params.get("value");
-        } else if (property.equals("plugin.restapi.permission")) {
+        } else if (property.equals("plugin.ofchat.permission")) {
             this.permission = (String) params.get("value");
-        } else if (property.equals("plugin.restapi.enabled")) {
+        } else if (property.equals("plugin.ofchat.enabled")) {
             this.enabled = Boolean.parseBoolean((String) params.get("value"));
-        } else if (property.equals("plugin.restapi.allowedIPs")) {
+        } else if (property.equals("plugin.ofchat.allowedIPs")) {
             this.allowedIPs = StringUtils.stringToCollection((String) params.get("value"));
-        } else if (property.equals("plugin.restapi.httpAuth")) {
+        } else if (property.equals("plugin.ofchat.httpAuth")) {
             this.httpAuth = (String) params.get("value");
         } else if(property.equals(CUSTOM_AUTH_FILTER_PROPERTY_NAME)) {
             this.customAuthFilterClassName = (String) params.get("value");
@@ -821,15 +821,15 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
      * @see org.jivesoftware.util.PropertyEventListener#propertyDeleted(java.lang.String, java.util.Map)
      */
     public void propertyDeleted(String property, Map<String, Object> params) {
-        if (property.equals("plugin.restapi.secret")) {
+        if (property.equals("plugin.ofchat.secret")) {
             this.secret = "";
-        } else if (property.equals("plugin.restapi.permission")) {
+        } else if (property.equals("plugin.ofchat.permission")) {
             this.permission = "";
-        } else if (property.equals("plugin.restapi.enabled")) {
+        } else if (property.equals("plugin.ofchat.enabled")) {
             this.enabled = false;
-        } else if (property.equals("plugin.restapi.allowedIPs")) {
+        } else if (property.equals("plugin.ofchat.allowedIPs")) {
             this.allowedIPs = Collections.emptyList();
-        } else if (property.equals("plugin.restapi.httpAuth")) {
+        } else if (property.equals("plugin.ofchat.httpAuth")) {
             this.httpAuth = "basic";
         } else if(property.equals(CUSTOM_AUTH_FILTER_PROPERTY_NAME)) {
             this.customAuthFilterClassName = null;

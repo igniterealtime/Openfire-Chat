@@ -85,7 +85,7 @@
       });
 
       window.swaggerUi.load();
-      window.swaggerUi.api.clientAuthorizations.add("ofchat", new SwaggerClient.ApiKeyAuthorization("Authorization", "<%= JiveGlobals.getProperty("plugin.restapi.secret", null) %>", "header"));
+      window.swaggerUi.api.clientAuthorizations.add("ofchat", new SwaggerClient.ApiKeyAuthorization("Authorization", "<%= JiveGlobals.getProperty("plugin.ofchat.secret", null) %>", "header"));
 
       function log() {
         if ('console' in window) {

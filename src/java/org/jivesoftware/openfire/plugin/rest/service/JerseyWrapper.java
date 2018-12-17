@@ -26,10 +26,10 @@ import org.traderlynk.blast.MessageBlastService;
 public class JerseyWrapper extends ServletContainer {
 
     /** The Constant CUSTOM_AUTH_PROPERTY_NAME */
-    private static final String CUSTOM_AUTH_PROPERTY_NAME = "plugin.restapi.customAuthFilter";
+    private static final String CUSTOM_AUTH_PROPERTY_NAME = "plugin.ofchat.customAuthFilter";
 
     /** The Constant REST_AUTH_TYPE */
-    private static final String REST_AUTH_TYPE  = "plugin.restapi.httpAuth";
+    private static final String REST_AUTH_TYPE  = "plugin.ofchat.httpAuth";
 
     /** The Constant AUTHFILTER. */
     private static final String AUTHFILTER = "org.jivesoftware.openfire.plugin.rest.AuthFilter";

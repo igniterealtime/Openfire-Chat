@@ -113,7 +113,7 @@
 <html>
 <head>
 <title>Chat API Properties</title>
-<meta name="pageID" content="rest-api" />
+<meta name="pageID" content="chatapi-rest-api" />
 </head>
 <body>
 

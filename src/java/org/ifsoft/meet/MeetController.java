@@ -67,7 +67,12 @@ public class MeetController {
      */
     public boolean performAction(String action, String callId, String destination)
     {
-        Log.debug("performAction " + action + " " + callId + " " + destination + " " + callList.get(callId));
+        JSONObject call = callList.get(callId);
+        String otherCallid = otherCallid = callId + " -bleg";   // use " -both" for consultative transfer
+
+        if (call.has("otherCallId")) otherCallid = call.getString("otherCallId");
+
+        Log.debug("performAction " + action + " " + callId + " " + destination + " " + call);
 
         boolean processed = false;
 
@@ -83,7 +88,7 @@ public class MeetController {
         }
         else
 
-        if ("transfer".equals(action) && RESTServicePlugin.getInstance().sendAsyncFWCommand("uuid_transfer " + callId + " -bleg " + destination) != null)
+        if ("transfer".equals(action) && RESTServicePlugin.getInstance().sendAsyncFWCommand("uuid_transfer " + otherCallid + " " + destination) != null)
         {
             processed = true;
         }
