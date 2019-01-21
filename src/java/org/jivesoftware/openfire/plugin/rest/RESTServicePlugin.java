@@ -104,7 +104,7 @@ import org.jivesoftware.openfire.sip.sipaccount.SipAccount;
 /**
  * The Class RESTServicePlugin.
  */
-public class RESTServicePlugin implements Plugin, SessionEventListener, PropertyEventListener, PacketInterceptor {
+public class RESTServicePlugin implements Plugin, SessionEventListener, PropertyEventListener, PacketInterceptor, MUCEventListener {
     private static final Logger Log = LoggerFactory.getLogger(RESTServicePlugin.class);
 
     /** The Constant INSTANCE. */
@@ -115,6 +115,8 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
     private static final String DOMAIN = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
     private static final RosterManager ROSTER_MANAGER = XMPPServer.getInstance().getRosterManager();
     private static final MessageRouter MESSAGE_ROUTER = XMPPServer.getInstance().getMessageRouter();
+
+    private static Map<String, IQ>  registrations = new HashMap<String, IQ>();
 
     /** The authentication secret. */
     private String secret;
@@ -161,6 +163,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
     private Map<String, IQ> addhocCommands;
     private TempFileToucherTask tempFileToucherTask;
     private ArrayList<Handler> handlers = new ArrayList<>();
+
 
     /**
      * Gets the single instance of RESTServicePlugin.
@@ -469,7 +472,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
         if ( smsEnabled || EmailListener.getInstance().isSmtpEnabled())
         {
-            Log.info("Setup SMS message interceptor");
+            Log.info("Setup SMS/Email message interceptor");
             InterceptorManager.getInstance().addInterceptor(this);
         }
 
@@ -480,6 +483,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             TaskEngine.getInstance().schedule( tempFileToucherTask, period, period );
         }
 
+        MUCEventDispatcher.addListener(this);
     }
 
     /* (non-Javadoc)
@@ -534,6 +538,8 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             TaskEngine.getInstance().cancelScheduledTask( tempFileToucherTask );
             tempFileToucherTask = null;
         }
+
+        MUCEventDispatcher.removeListener(this);
     }
 
     /**
@@ -1044,13 +1050,61 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     public void interceptPacket(Packet packet, org.jivesoftware.openfire.session.Session session, boolean incoming, boolean processed) throws PacketRejectedException
     {
-        // Ignore any packets that haven't already been processed by interceptors.
+        if (packet instanceof IQ) {
 
-        if (!processed) {
-            return;
+            IQ iq = (IQ)packet;
+            Element childElement = iq.getChildElement();
+
+            if (childElement == null) {
+                return;
+            }
+            String namespace = childElement.getNamespaceURI();
+            String from = childElement.attributeValue("from");
+
+            if ("http://igniterealtime.org/ofchat/register".equals(namespace))
+            {
+                if (iq.getType() != IQ.Type.result && !processed && incoming)
+                {
+                    Log.info("interceptPacket - register user account " + from);
+
+                    if (from != null)
+                    {
+                        User fromUser = null;
+                        try {fromUser = userManager.getUser(from);} catch (Exception e1) {}
+
+                        if (fromUser == null)
+                        {
+                            String name = childElement.attributeValue("name");
+                            String subject = childElement.attributeValue("subject");
+                            String email = childElement.attributeValue("email");
+                            String body = childElement.getText();
+
+                            registrations.put(email, iq);
+                            MeetService.sendEmailMessage(null, email, name, from, subject, body, null);
+
+                        } else {
+                            IQ reply = IQ.createResultIQ(iq);
+                            Element child = reply.setChildElement("register", namespace);
+
+                            child.addAttribute("error", "user already registered");
+                            XMPPServer.getInstance().getIQRouter().route(reply);
+                        }
+                    }
+                    else {
+                        IQ reply = IQ.createResultIQ(iq);
+                        Element child = reply.setChildElement("register", namespace);
+
+                        child.addAttribute("error", "register jid missing");
+                        XMPPServer.getInstance().getIQRouter().route(reply);
+                    }
+
+                    throw new PacketRejectedException();
+                }
+            }
         }
+        else
 
-        if (packet instanceof Message)
+        if (packet instanceof Message && processed)
         {
             if (!incoming) {
                 return;
@@ -1134,6 +1188,8 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     public static boolean emailAccept(String from, String to)
     {
+        if (registrations.containsKey(from)) return true;       // account registration by email
+
         boolean accept = false;
 
         try {
@@ -1145,8 +1201,11 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
                 RosterItem friend = roster.getRosterItem(new JID(fromJid));
                 accept = friend != null;
 
-                OpenfireConnection conn = OpenfireConnection.createConnection(JID.escapeNode(from), null, true);
-                conn.postPresence("available", null);
+                if (accept)
+                {
+                    OpenfireConnection conn = OpenfireConnection.createConnection(JID.escapeNode(from), null, true);
+                    conn.postPresence("available", null);
+                }
             }
 
 
@@ -1160,6 +1219,58 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     public static void emailIncoming(String from, String toJid, String text)
     {
+        if (registrations.containsKey(from))
+        {
+            IQ iq = registrations.remove(from);
+            String namespace = iq.getChildElement().getNamespaceURI();
+            IQ reply = IQ.createResultIQ(iq);
+            Element child = reply.setChildElement("register", namespace);
+
+            Element register = iq.getChildElement();
+            String email = register.attributeValue("email");
+            String userJid = register.attributeValue("from");
+            String name = register.attributeValue("name");
+
+            String password = register.attributeValue("password");
+            if (password == null) password = PasswordGenerator.generate(16);
+            child.addAttribute("password", password);
+
+            try {
+                Log.info("emailIncoming: Creating user " + userJid + " " + name + " " + password);
+
+                Group group = null;
+                JID jid = new JID(userJid);
+                String groupName = email.split("@")[1];
+                String userName = jid.getNode();
+
+                User user = userManager.createUser(userName, password, name, email);
+
+                try {
+                    group = GroupManager.getInstance().getGroup(groupName);
+
+                } catch (GroupNotFoundException e1) {
+                    try {
+                        group = GroupManager.getInstance().createGroup(groupName);
+                        group.getProperties().put("sharedRoster.showInRoster", "onlyGroup");
+                        group.getProperties().put("sharedRoster.displayName", groupName);
+                        group.getProperties().put("sharedRoster.groupList", "");
+
+                    } catch (Exception e4) {
+                        // not possible to create group, just ignore
+                    }
+                }
+
+                if (group != null) group.getMembers().add(XMPPServer.getInstance().createJID(userName, null));
+            }
+            catch (Exception e2) {
+                Log.error("emailIncoming: Failed creating user " + userJid, e2);
+                child.addAttribute("error", e2.toString());
+            }
+
+            XMPPServer.getInstance().getIQRouter().route(reply);
+            return;
+        }
+
         String fromJid = JID.escapeNode(from) + "@" + DOMAIN;
 
         Message message = new Message();
@@ -1647,6 +1758,45 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         return response;
     }
 
+    public void roomCreated(JID roomJID)
+    {
+
+    }
+
+    public void roomDestroyed(JID roomJID)
+    {
+
+    }
+
+    public void occupantJoined(JID roomJID, JID user, String nickname)
+    {
+
+    }
+
+    public void occupantLeft(JID roomJID, JID user)
+    {
+
+    }
+
+    public void nicknameChanged(JID roomJID, JID user, String oldNickname, String newNickname)
+    {
+
+    }
+
+    public void messageReceived(JID roomJID, JID user, String nickname, Message message)
+    {
+
+    }
+
+    public void roomSubjectChanged(JID roomJID, JID user, String newSubject)
+    {
+
+    }
+
+    public void privateMessageRecieved(JID a, JID b, Message message)
+    {
+
+    }
 
     public class AdminConnection extends VirtualConnection
     {
@@ -1785,6 +1935,52 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
                     Log.warn( "An exception occurred while trying to update the last modified timestamp of content in Jetty's temporary storage in: {}", tempDirectory, e );
                 }
             }
+        }
+    }
+
+    public static final class PasswordGenerator {
+
+        private static final String LOWER = "abcdefghijklmnopqrstuvwxyz";
+        private static final String UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        private static final String DIGITS = "0123456789";
+        private static final String PUNCTUATION = "!@#$%&*()_+-=[]|,./?><";
+        private static final boolean useLower = true;
+        private static final boolean useUpper = true;
+        private static final boolean useDigits = true;
+        private static final boolean usePunctuation = false;
+
+        public static String generate(int length) {
+            // Argument Validation.
+            if (length <= 0) {
+                return "";
+            }
+
+            // Variables.
+            StringBuilder password = new StringBuilder(length);
+            Random random = new Random(System.nanoTime());
+
+            // Collect the categories to use.
+            List<String> charCategories = new ArrayList<>(4);
+            if (useLower) {
+                charCategories.add(LOWER);
+            }
+            if (useUpper) {
+                charCategories.add(UPPER);
+            }
+            if (useDigits) {
+                charCategories.add(DIGITS);
+            }
+            if (usePunctuation) {
+                charCategories.add(PUNCTUATION);
+            }
+
+            // Build the password.
+            for (int i = 0; i < length; i++) {
+                String charCategory = charCategories.get(random.nextInt(charCategories.size()));
+                int position = random.nextInt(charCategory.length());
+                password.append(charCategory.charAt(position));
+            }
+            return new String(password);
         }
     }
 }

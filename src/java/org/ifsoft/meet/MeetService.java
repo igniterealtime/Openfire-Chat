@@ -276,7 +276,7 @@ public class MeetService {
 
                     for (String key : user.getProperties().keySet())
                     {
-                        Log.info("getUserProperty " + key + " " + user.getProperties().get(key));
+                        Log.debug("getUserProperty " + key + " " + user.getProperties().get(key));
 
                         if (!key.startsWith("ofchat.blast."))
                         {
@@ -299,7 +299,7 @@ public class MeetService {
     @Path("/profile")
     public Response setUserProperties(String properties) throws ServiceException
     {
-        Log.info("setUserProperties " + properties);
+        Log.debug("setUserProperties " + properties);
         try {
 
             String username = getEndUser();
@@ -311,7 +311,7 @@ public class MeetService {
             {
                 JSONObject property = profileProperties.getJSONObject(i);
 
-                Log.info("setUserProperty " + username + " " + property.getString("name") + " " + property.getString("value"));
+                Log.debug("setUserProperty " + username + " " + property.getString("name") + " " + property.getString("value"));
 
                 if (property.getString("name") != null && property.getString("value") != null)
                 {
