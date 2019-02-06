@@ -46,6 +46,7 @@ import org.jivesoftware.openfire.net.VirtualConnection;
 import org.jivesoftware.openfire.auth.UnauthorizedException;
 import org.jivesoftware.openfire.auth.AuthToken;
 import org.jivesoftware.openfire.auth.AuthFactory;
+import org.jivesoftware.openfire.vcard.VCardManager;
 import org.jivesoftware.openfire.user.*;
 import org.jivesoftware.openfire.event.*;
 import org.jivesoftware.openfire.group.*;
@@ -95,6 +96,8 @@ import org.jivesoftware.smack.OpenfireConnection;
 import org.ifsoft.meet.*;
 import org.xmpp.packet.*;
 import org.dom4j.Element;
+import org.dom4j.DocumentException;
+import org.dom4j.DocumentHelper;
 import net.sf.json.*;
 import org.jitsi.util.OSUtils;
 
@@ -112,6 +115,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     private static final String CUSTOM_AUTH_FILTER_PROPERTY_NAME = "plugin.ofchat.customAuthFilter";
     private static final UserManager userManager = XMPPServer.getInstance().getUserManager().getInstance();
+    private static final String SERVER = XMPPServer.getInstance().getServerInfo().getHostname();
     private static final String DOMAIN = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
     private static final RosterManager ROSTER_MANAGER = XMPPServer.getInstance().getRosterManager();
     private static final MessageRouter MESSAGE_ROUTER = XMPPServer.getInstance().getMessageRouter();
@@ -970,11 +974,10 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     public String getIpAddress()
     {
-        String ourHostname = XMPPServer.getInstance().getServerInfo().getHostname();
-        String ourIpAddress = ourHostname;
+        String ourIpAddress = SERVER;
 
         try {
-            ourIpAddress = InetAddress.getByName(ourHostname).getHostAddress();
+            ourIpAddress = InetAddress.getByName(SERVER).getHostAddress();
         } catch (Exception e) {
 
         }
@@ -1230,13 +1233,14 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             String email = register.attributeValue("email");
             String userJid = register.attributeValue("from");
             String name = register.attributeValue("name");
+            String avatar = register.attributeValue("avatar");
 
             String password = register.attributeValue("password");
             if (password == null) password = PasswordGenerator.generate(16);
             child.addAttribute("password", password);
 
             try {
-                Log.info("emailIncoming: Creating user " + userJid + " " + name + " " + password);
+                Log.info("emailIncoming: Creating user " + userJid + " " + name + " " + password + " " + email + "\n" + avatar);
 
                 Group group = null;
                 JID jid = new JID(userJid);
@@ -1245,12 +1249,15 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
                 User user = userManager.createUser(userName, password, name, email);
 
+                VCardManager.getInstance().setVCard(userName, getDefaultVCard(userName, userJid, password, name, email, avatar));
+
                 try {
                     group = GroupManager.getInstance().getGroup(groupName);
 
                 } catch (GroupNotFoundException e1) {
                     try {
                         group = GroupManager.getInstance().createGroup(groupName);
+                        group.setDescription(groupName);
                         group.getProperties().put("sharedRoster.showInRoster", "onlyGroup");
                         group.getProperties().put("sharedRoster.displayName", groupName);
                         group.getProperties().put("sharedRoster.groupList", "");
@@ -1258,6 +1265,37 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
                     } catch (Exception e4) {
                         // not possible to create group, just ignore
                     }
+                }
+
+                MUCRoom chatRoom = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService("conference").getChatRoom(groupName);
+
+                if (chatRoom == null)
+                {
+                    try {
+                        createRoom(groupName, group.getDescription());
+                    } catch (NotAllowedException e) {
+                        // not possible to create chat room, just ignore
+                    }
+                }
+
+                try {
+                    String bookmarkValue = groupName + "@conference." + DOMAIN;
+
+                    long id = -1;
+
+                    for (Bookmark bookmark : BookmarkManager.getBookmarks())
+                    {
+                        if (bookmark.getValue().equals(bookmarkValue)) id = bookmark.getBookmarkID();
+                    }
+
+                    if (id == -1)
+                    {
+                        Bookmark book = new Bookmark(Bookmark.Type.group_chat, group.getDescription(), bookmarkValue, null, new ArrayList<String>(Arrays.asList(new String[] {groupName})));
+                        book.setProperty("autojoin", "true");
+                    }
+
+                } catch (Exception e) {
+                    // not possible to create book mark, just ignore
                 }
 
                 if (group != null) group.getMembers().add(XMPPServer.getInstance().createJID(userName, null));
@@ -1299,6 +1337,70 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         message.setBody(msg);
 
         MESSAGE_ROUTER.route(message);
+    }
+
+    private static void createRoom(String name, String displayName) throws NotAllowedException
+    {
+        MUCRoom room = XMPPServer.getInstance().getMultiUserChatManager().getMultiUserChatService("conference").getChatRoom(name, XMPPServer.getInstance().createJID("admin", null));
+
+        List<String> roles = new ArrayList<String>();
+        roles.add("moderator");
+        roles.add("participant");
+        roles.add("visitor");
+
+        room.setNaturalLanguageName(displayName);
+        room.setSubject(null);
+        room.setDescription(displayName + " Discussions");
+        room.setPassword(null);
+        room.setPersistent(true);
+        room.setPublicRoom(true);
+        room.setRegistrationEnabled(false);
+        room.setCanAnyoneDiscoverJID(true);
+        room.setCanOccupantsChangeSubject(true);
+        room.setCanOccupantsInvite(true);
+        room.setChangeNickname(true);
+        room.setCreationDate(new Date());
+        room.setModificationDate(new Date());
+        room.setLogEnabled(true);
+        room.setLoginRestrictedToNickname(false);
+        room.setMaxUsers(30);
+        room.setMembersOnly(false);
+        room.setModerated(false);
+        room.setRolesToBroadcastPresence(roles);
+
+        try {
+            room.unlock(room.getRole());
+            room.saveToDB();
+
+        } catch (Exception re) {
+            // not possible to create chat room, just ignore
+        }
+    }
+
+    private static Element getDefaultVCard(String username, String jid, String password, String name, String email, String avatar)
+    {
+        String lastname = "";
+        String firstname = name;
+        String[] avatarData = {"data:image/svg+xml", "PD94bWwgdmVyc2lvbj0iMS4wIj8+CjxzdmcgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCI+CiA8cmVjdCB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgZmlsbD0iIzU1NSIvPgogPGNpcmNsZSBjeD0iNjQiIGN5PSI0MSIgcj0iMjQiIGZpbGw9IiNmZmYiLz4KIDxwYXRoIGQ9Im0yOC41IDExMiB2LTEyIGMwLTEyIDEwLTI0IDI0LTI0IGgyMyBjMTQgMCAyNCAxMiAyNCAyNCB2MTIiIGZpbGw9IiNmZmYiLz4KPC9zdmc+Cg=="};
+        int pos = name.indexOf(" ");
+
+        if (pos > -1)
+        {
+            lastname = name.substring(pos + 1);
+            firstname = name.substring(0, pos);
+        }
+
+        if (avatar != null && avatar.indexOf(";base64,") > -1)
+        {
+            avatarData = avatar.split(";base64,");
+        }
+
+        try {
+            String xml = "<vCard xmlns=\"vcard-temp\"><N><FAMILY>" + lastname + "</FAMILY><GIVEN>" + firstname + "</GIVEN><MIDDLE></MIDDLE></N><ORG><ORGNAME></ORGNAME><ORGUNIT/></ORG><FN>" + name + "</FN><ROLE/><DESC/><JABBERID>" + jid + "</JABBERID><userName>" + username + "</userName><server>" + SERVER + "</server><URL/><NICKNAME>" + name + "</NICKNAME><TITLE/><PHOTO><TYPE>" + avatarData[0].substring(5) + "</TYPE><BINVAL>" + avatarData[1] + "</BINVAL></PHOTO><EMAIL><WORK/><INTERNET/><PREF/><USERID>" + email + "</USERID></EMAIL><EMAIL><HOME/><INTERNET/><PREF/><USERID>" + email + "</USERID></EMAIL><TEL><PAGER/><WORK/><NUMBER/></TEL><TEL><CELL/><WORK/><NUMBER/></TEL><TEL><VOICE/><WORK/><NUMBER/></TEL><TEL><FAX/><WORK/><NUMBER/></TEL><TEL><PAGER/><HOME/><NUMBER/></TEL><TEL><CELL/><HOME/><NUMBER/></TEL><TEL><VOICE/><HOME/><NUMBER/></TEL><TEL><FAX/><HOME/><NUMBER/></TEL><ADR><WORK/><EXTADD/><PCODE></PCODE><REGION></REGION><STREET></STREET><CTRY></CTRY><LOCALITY></LOCALITY></ADR><ADR><HOME/><EXTADD/><PCODE/><REGION/><STREET/><CTRY/><LOCALITY/></ADR></vCard>";
+            return DocumentHelper.parseText(xml).getRootElement();
+        } catch (DocumentException e) {
+            return null;
+        }
     }
 
     public static void smsIncoming(JSONObject sms)
