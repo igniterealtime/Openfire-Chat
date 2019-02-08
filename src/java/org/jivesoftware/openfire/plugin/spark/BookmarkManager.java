@@ -26,13 +26,21 @@ import java.util.List;
 
 import javax.ws.rs.core.Response;
 
+import org.dom4j.Element;
+import org.xmpp.packet.*;
+
+import org.jivesoftware.openfire.*;
 import org.jivesoftware.database.DbConnectionManager;
 import org.jivesoftware.util.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.jivesoftware.openfire.group.*;
+import org.jivesoftware.openfire.user.*;
 import org.jivesoftware.openfire.plugin.rest.exceptions.ExceptionType;
 import org.jivesoftware.openfire.plugin.rest.exceptions.ServiceException;
+import org.jivesoftware.util.cache.Cache;
+import org.jivesoftware.util.cache.CacheFactory;
 
 /**
  * Manages global bookmarks. Bookmarks are defined by
@@ -45,10 +53,13 @@ import org.jivesoftware.openfire.plugin.rest.exceptions.ServiceException;
  */
 public class BookmarkManager {
 
-	private static final Logger Log = LoggerFactory.getLogger(BookmarkManager.class);
+    private static final Logger Log = LoggerFactory.getLogger(BookmarkManager.class);
 
     private static final String DELETE_BOOKMARK = "DELETE FROM ofBookmark where bookmarkID=?";
     private static final String SELECT_BOOKMARKS = "SELECT bookmarkID from ofBookmark";
+
+    private static final String DOMAIN = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
+    private static final MessageRouter MESSAGE_ROUTER = XMPPServer.getInstance().getMessageRouter();
 
     /**
      * Returns the specified bookmark.
@@ -60,6 +71,124 @@ public class BookmarkManager {
     public static Bookmark getBookmark(long bookmarkID) throws NotFoundException {
         // TODO add caching
         return new Bookmark(bookmarkID);
+    }
+
+    /**
+     * Returns the specified bookmark.
+     *
+     * @param bookmarkValue the value of the bookmark.
+     * @return the bookmark.
+     * @throws NotFoundException if the bookmark could not be found or loaded.
+     */
+    public static Bookmark getBookmark(String bookmarkValue)
+    {
+        Cache<String, Bookmark> bookmarkCache = CacheFactory.createLocalCache("Bookmarks");
+        Bookmark bookmark = bookmarkCache.get(bookmarkValue);
+
+        if (bookmark != null) {
+            Log.debug("getBookmark: using cache "  + bookmarkValue);
+            return bookmark;
+        }
+
+        try {
+            bookmark = new Bookmark(bookmarkValue);
+            bookmarkCache.put(bookmarkValue, bookmark);
+
+            Log.debug("getBookmark: adding to cache "  + bookmarkValue);
+
+        } catch (Exception e) {
+            // ignore as bookmark will be null
+        }
+        return bookmark;
+    }
+
+    /**
+     * Returns true if bookmark is valid for user with JID.
+     *
+     * @param username.
+     * @param bookmark.
+     * @return true or false.
+     */
+
+    public static boolean isBookmarkForUser(String username, Bookmark bookmark)
+    {
+        if (username == null || username.equals("null") || username.equals("")) return false;
+
+        if (bookmark.isGlobalBookmark())            return true;
+        if (bookmark.getUsers().contains(username)) return true;
+
+        Collection<String> groups = bookmark.getGroups();
+
+        if (groups != null && !groups.isEmpty())
+        {
+            GroupManager groupManager = GroupManager.getInstance();
+
+            for (String groupName : groups) {
+                try {
+                    Group group = groupManager.getGroup(groupName);
+
+                    if (group.isUser(username)) {
+                        return true;
+                    }
+                } catch (GroupNotFoundException e) { }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Broadcasts groupchat notification message to all users of a bookmark.
+     *
+     * @param bookmark from which a user list will be compiled from.
+     * @param nickname of user who posts groupchat message.
+     * @param body text of groupchat message.
+     */
+    public static void broadcastMessage(JID roomJID, JID user, String nickname, String body, Bookmark bookmark)
+    {
+        Message message = new Message();
+        message.setFrom(roomJID);
+
+        Element notification = message.addChildElement("notification", "http://igniterealtime.org/ofchat/notification");
+        notification.setText(body);
+        notification.addAttribute("jid", user.toBareJID());
+        notification.addAttribute("nickname", nickname);
+
+        if (bookmark.isGlobalBookmark())
+        {
+           SessionManager.getInstance().broadcast(message);
+           return;
+        }
+
+        for (String username : bookmark.getUsers())
+        {
+            Message newMessage = message.createCopy();
+            newMessage.setTo(username + "@" + DOMAIN);
+            MESSAGE_ROUTER.route(newMessage);
+        }
+
+        GroupManager groupManager = GroupManager.getInstance();
+
+        for (String groupName : bookmark.getGroups())
+        {
+            try {
+                Group group = groupManager.getGroup(groupName);
+
+                for (JID memberJID : group.getMembers())
+                {
+                    Message newMessage = message.createCopy();
+                    newMessage.setTo(memberJID);
+                    MESSAGE_ROUTER.route(newMessage);
+                }
+
+                for (JID memberJID : group.getAdmins())
+                {
+                    Message newMessage = message.createCopy();
+                    newMessage.setTo(memberJID);
+                    MESSAGE_ROUTER.route(newMessage);
+                }
+
+            } catch (GroupNotFoundException e) { }
+        }
     }
 
     /**
@@ -91,7 +220,7 @@ public class BookmarkManager {
         }
         catch (SQLException e) {
             Log.error(e.getMessage(), e);
-			throw new ServiceException("SQL Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+            throw new ServiceException("SQL Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
         }
         finally {
             DbConnectionManager.closeConnection(rs, pstmt, con);
@@ -117,7 +246,7 @@ public class BookmarkManager {
         }
         catch (SQLException e) {
             Log.error(e.getMessage(), e);
-			throw new ServiceException("SQL Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+            throw new ServiceException("SQL Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
         }
         finally {
             DbConnectionManager.closeConnection(pstmt, con);

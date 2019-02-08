@@ -58,7 +58,7 @@ public class SipAccountDAO {
         SipAccount sipAccount = sipCache2.get(username);
 
         if (sipAccount != null) {
-            Log.info("getAccountByUser: using cache2 "  + username);
+            Log.debug("getAccountByUser: using cache2 "  + username);
             return sipAccount;
         }
         String sql = "SELECT username, sipusername, sipauthuser, sipdisplayname, sippassword, sipserver, enabled, "

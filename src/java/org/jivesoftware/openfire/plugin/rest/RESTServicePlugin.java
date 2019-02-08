@@ -54,6 +54,7 @@ import org.jivesoftware.openfire.roster.*;
 import org.jivesoftware.openfire.muc.*;
 import org.jivesoftware.openfire.session.*;
 import org.jivesoftware.openfire.interceptor.*;
+import org.jivesoftware.openfire.plugin.spark.*;
 import org.jivesoftware.openfire.*;
 
 import org.jivesoftware.openfire.plugin.rest.sasl.*;
@@ -266,16 +267,6 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         Log.info("Initialize Swagger WebService ");
 
         context3 = new WebAppContext(null, pluginDirectory.getPath() + "/classes/swagger", "/swagger");
-
-/*
-        ServletHolder fcgiServlet = context3.addServlet(FastCGIProxyServlet.class, "*.php");
-        fcgiServlet.setInitParameter(FastCGIProxyServlet.SCRIPT_ROOT_INIT_PARAM, pluginDirectory.getPath() + "/classes");
-        fcgiServlet.setInitParameter("proxyTo", "http://localhost:9123");
-        fcgiServlet.setInitParameter("prefix", "/");
-        fcgiServlet.setInitParameter("dirAllowed", "false");
-        fcgiServlet.setInitParameter(FastCGIProxyServlet.SCRIPT_PATTERN_INIT_PARAM, "(.+?\\.php)");
-*/
-
         context3.setClassLoader(this.getClass().getClassLoader());
         final List<ContainerInitializer> initializers3 = new ArrayList<>();
         initializers3.add(new ContainerInitializer(new JettyJasperInitializer(), null));
@@ -1860,6 +1851,8 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         return response;
     }
 
+
+
     public void roomCreated(JID roomJID)
     {
 
@@ -1887,7 +1880,19 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     public void messageReceived(JID roomJID, JID user, String nickname, Message message)
     {
+        String body = message.getBody();
 
+        if (body != null)
+        {
+            Bookmark bookmark = BookmarkManager.getBookmark(roomJID.toString());
+
+            if ( bookmark != null)
+            {
+                Log.info("MUC messageReceived " + roomJID + " " + user.toBareJID() + " " + nickname + "\n" + message.getBody());
+
+                BookmarkManager.broadcastMessage(roomJID, user, nickname, message.getBody(), bookmark);
+            }
+        }
     }
 
     public void roomSubjectChanged(JID roomJID, JID user, String newSubject)
