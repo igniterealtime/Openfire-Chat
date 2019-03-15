@@ -312,29 +312,66 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         HttpBindManager.getInstance().addJettyHandler(context6);
         handlers.add(context6);
 
-        if (OSUtils.IS_WINDOWS)
+        Log.info("Initialize Windows SSO WebService ");
+
+        context7 = new WebAppContext(null, pluginDirectory.getPath() + "/classes/win-sso", "/sso");
+        context7.setClassLoader(this.getClass().getClassLoader());
+
+        final List<ContainerInitializer> initializers7 = new ArrayList<>();
+        initializers7.add(new ContainerInitializer(new JettyJasperInitializer(), null));
+        context7.setAttribute("org.eclipse.jetty.containerInitializers", initializers7);
+        context7.setAttribute(InstanceManager.class.getName(), new SimpleInstanceManager());
+        context7.setWelcomeFiles(new String[]{"index.jsp"});
+
+        if (OSUtils.IS_WINDOWS && JiveGlobals.getBooleanProperty("ofchat.kerberos.enabled", false) == false)
         {
-            Log.info("Initialize Windows SSO WebService ");
-
-            context7 = new WebAppContext(null, pluginDirectory.getPath() + "/classes/win-sso", "/sso");
-            context7.setClassLoader(this.getClass().getClassLoader());
-
-            final List<ContainerInitializer> initializers7 = new ArrayList<>();
-            initializers7.add(new ContainerInitializer(new JettyJasperInitializer(), null));
-            context7.setAttribute("org.eclipse.jetty.containerInitializers", initializers7);
-            context7.setAttribute(InstanceManager.class.getName(), new SimpleInstanceManager());
-            context7.setWelcomeFiles(new String[]{"index.jsp"});
+            Log.info("Initialize waffle security filter");
 
             waffle.servlet.NegotiateSecurityFilter securityFilter = new waffle.servlet.NegotiateSecurityFilter();
             FilterHolder filterHolder = new FilterHolder();
             filterHolder.setFilter(securityFilter);
             EnumSet<DispatcherType> enums = EnumSet.of(DispatcherType.REQUEST);
             enums.add(DispatcherType.REQUEST);
-            context7.addFilter(filterHolder, "/*", enums);
 
-            HttpBindManager.getInstance().addJettyHandler(context7);
-            handlers.add(context7);
+            context7.addFilter(filterHolder, "/*", enums);
+            context7.addServlet(new ServletHolder(new waffle.servlet.WaffleInfoServlet()), "/waffle");
         }
+        else {
+            String domainRealm = JiveGlobals.getProperty("ofchat.kerberos.realm", DOMAIN);
+            System.setProperty("javax.security.auth.useSubjectCredsOnly", JiveGlobals.getProperty("ofchat.kerberos.useSubject_credsOnly", "false"));
+            System.setProperty("java.security.auth.login.config", JiveGlobals.getProperty("ofchat.kerberos.login.config", "."));
+            System.setProperty("java.security.krb5.conf", JiveGlobals.getProperty("ofchat.kerberos.krb5.config", "."));
+
+            System.setProperty("org.eclipse.jetty.LEVEL", "debug");
+            System.setProperty("sun.security.spnego.debug", "all");
+
+            Log.info("Initialize kerberos security handler: realm=" + domainRealm + ", usesubject.credsonly=" + System.getProperty("javax.security.auth.useSubjectCredsOnly") + ", login.config=" + System.getProperty("java.security.auth.login.config") + ", krb5.config=" + System.getProperty("java.security.krb5.conf"));
+
+            Constraint constraint = new Constraint();
+            constraint.setName(Constraint.__SPNEGO_AUTH);
+            constraint.setRoles(new String[]{domainRealm});
+            constraint.setAuthenticate(true);
+
+            ConstraintMapping cm = new ConstraintMapping();
+            cm.setConstraint(constraint);
+            cm.setPathSpec("/*");
+
+            SpnegoLoginService loginService = new SpnegoLoginService();
+            loginService.setConfig(JiveGlobals.getProperty("ofchat.kerberos.spnego.config", "."));
+            loginService.setName(domainRealm);
+
+            ConstraintSecurityHandler sh = new ConstraintSecurityHandler();
+            sh.setAuthenticator(new SpnegoAuthenticator());
+            sh.setConstraintMappings(new ConstraintMapping[]{cm});
+            sh.setRealmName(domainRealm);
+            sh.setLoginService(loginService);
+            context7.setSecurityHandler(sh);
+        }
+
+        context7.addServlet(new ServletHolder(new org.ifsoft.sso.Password()), "/password");
+
+        HttpBindManager.getInstance().addJettyHandler(context7);
+        handlers.add(context7);
 
         proxyContexts = new HashMap<String, ServletContextHandler>();
 
@@ -478,7 +515,10 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             TaskEngine.getInstance().schedule( tempFileToucherTask, period, period );
         }
 
-        MUCEventDispatcher.addListener(this);
+        if ( JiveGlobals.getBooleanProperty( "ofchat.mucevent.dispatcher.enabled", true))
+        {
+            MUCEventDispatcher.addListener(this);
+        }
     }
 
     /* (non-Javadoc)
@@ -508,7 +548,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         HttpBindManager.getInstance().removeJettyHandler(context5);
         HttpBindManager.getInstance().removeJettyHandler(context6);
 
-        if (OSUtils.IS_WINDOWS) HttpBindManager.getInstance().removeJettyHandler(context7);
+        if (context7 != null) HttpBindManager.getInstance().removeJettyHandler(context7);
 
         for (String key : proxyContexts.keySet())
         {
@@ -534,7 +574,10 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             tempFileToucherTask = null;
         }
 
-        MUCEventDispatcher.removeListener(this);
+        if ( JiveGlobals.getBooleanProperty( "ofchat.mucevent.dispatcher.enabled", true))
+        {
+            MUCEventDispatcher.removeListener(this);
+        }
     }
 
     /**
@@ -1502,7 +1545,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     public void exitAllRooms(JID jid)
     {
-        boolean bruteForceLogoff = JiveGlobals.getBooleanProperty("ofmeet.bruteforce.logoff", true);
+        boolean bruteForceLogoff = JiveGlobals.getBooleanProperty("ofmeet.bruteforce.logoff", false);
 
         if (bruteForceLogoff)
         {
@@ -1880,18 +1923,27 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     public void messageReceived(JID roomJID, JID user, String nickname, Message message)
     {
-        String body = message.getBody();
+        Log.info("MUC messageReceived " + roomJID + " " + user + " " + nickname + "\n" + message.getBody());
+
+        final String body = message.getBody();
+        final String roomJid = roomJID.toString();
+        final String userJid = user.toBareJID();
 
         if (body != null)
         {
-            Bookmark bookmark = BookmarkManager.getBookmark(roomJID.toString());
-
-            if ( bookmark != null)
+            executor.submit(new Callable<Boolean>()
             {
-                Log.info("MUC messageReceived " + roomJID + " " + user.toBareJID() + " " + nickname + "\n" + message.getBody());
+                public Boolean call() throws Exception
+                {
+                    Bookmark bookmark = BookmarkManager.getBookmark(roomJid);
 
-                BookmarkManager.broadcastMessage(roomJID, user, nickname, message.getBody(), bookmark);
-            }
+                    if ( bookmark != null)
+                    {
+                        BookmarkManager.broadcastMessage(roomJid, userJid, nickname, body, bookmark);
+                    }
+                    return true;
+                }
+            });
         }
     }
 

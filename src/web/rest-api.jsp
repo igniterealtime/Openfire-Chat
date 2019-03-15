@@ -38,11 +38,24 @@
     boolean adhocEnabled = adhoc_enabled != null && adhoc_enabled.equals("on");    
     
     String swagger_secure = request.getParameter("swaggerSecure");    
-    boolean swaggerSecure = swagger_secure != null && swagger_secure.equals("on");       
+    boolean swaggerSecure = swagger_secure != null && swagger_secure.equals("on");  
     
     String httpAuth = ParamUtils.getParameter(request, "authtype");
     String allowedIPs = ParamUtils.getParameter(request, "allowedIPs");
     String customAuthFilterClassName = ParamUtils.getParameter(request, "customAuthFilterClassName");
+    
+    boolean kerberos = request.getParameter("kerberos") != null;    
+    
+    String kerberos_enabled = request.getParameter("kerberosEnabled");    
+    boolean kerberosEnabled = kerberos_enabled != null && kerberos_enabled.equals("on"); 
+    
+    String useSubject_credsOnly = request.getParameter("useSubjectCredsOnly");    
+    boolean useSubjectCredsOnly = useSubject_credsOnly != null && useSubject_credsOnly.equals("on");     
+        
+    String kerberosRealm = ParamUtils.getParameter(request, "kerberosRealm");
+    String spnegoConfig = ParamUtils.getParameter(request, "spnegoConfig");
+    String loginConfig = ParamUtils.getParameter(request, "loginConfig");    
+    String krb5Config = ParamUtils.getParameter(request, "krb5Config");     
     
     String loadingStatus = null;
     
@@ -53,6 +66,24 @@
     // Handle a save
     Map errors = new HashMap();
 
+    if (kerberos) 
+    {
+        if (kerberosRealm == null || kerberosRealm.equals("")) kerberosRealm = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
+        if (spnegoConfig == null || spnegoConfig.equals("")) spnegoConfig = ".";  
+        if (loginConfig == null || loginConfig.equals("")) loginConfig = ".";  
+        if (krb5Config == null || krb5Config.equals("")) krb5Config = ".";      
+        
+        JiveGlobals.setProperty("ofchat.kerberos.enabled", kerberosEnabled ? "true" : "false"); 
+        JiveGlobals.setProperty("ofchat.kerberos.useSubject_credsOnly", useSubjectCredsOnly ? "true" : "false"); 
+        JiveGlobals.setProperty("ofchat.kerberos.realm", kerberosRealm);         
+        JiveGlobals.setProperty("ofchat.kerberos.spnego.config", spnegoConfig);     
+        JiveGlobals.setProperty("ofchat.kerberos.login.config", loginConfig);         
+        JiveGlobals.setProperty("ofchat.kerberos.krb5.config", krb5Config);          
+        
+        response.sendRedirect("rest-api.jsp?success=true&msg=Kerberos configured ok");
+        return;        
+    }
+    
     if (certificates) 
     {
         plugin.refreshClientCerts();        
@@ -261,6 +292,40 @@
             </p>        
             <br> <br> <input type="submit" value="Refresh">           
         </div>
-    </form>        
+    </form>   
+    
+    <form action="rest-api.jsp?kerberos" method="post">
+
+        <div class="jive-contentBoxHeader">
+            Kerberos
+        </div>
+        <div class="jive-contentBox">
+            <input type="checkbox" name="kerberosEnabled"<%= JiveGlobals.getBooleanProperty("ofchat.kerberos.enabled", false) ? " checked" : "" %>>Kerberos Enabled   
+            <br> 
+            <input type="checkbox" name="useSubjectCredsOnly"<%= JiveGlobals.getBooleanProperty("ofchat.kerberos.useSubject_credsOnly", false) ? " checked" : "" %>>Use Subject Creds Only   
+            <br>  
+            <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+                <td width="15%"><label style="padding-left: 25px" for="kerberosRealm">Realm:</label></td>
+                <td><input type="text" name="kerberosRealm" value="<%=JiveGlobals.getProperty("ofchat.kerberos.realm", "")%>" id="kerberosRealm" style="width:35%;padding:4px;"></td>
+            </tr>    
+            <tr>              
+                <td><label style="padding-left: 25px" for="spnegoConfig">Spnego Config:</label></td>
+                <td><input type="text" name="spnegoConfig" value="<%=JiveGlobals.getProperty("ofchat.kerberos.spnego.config", "")%>" id="spnegoConfig" style="width:70%;padding:4px;"></td>
+            </tr>  
+            <tr>             
+                <td><label style="padding-left: 25px" for="loginConfig">Auth Login Config:</label></td>
+                <td><input type="text" name="loginConfig" value="<%=JiveGlobals.getProperty("ofchat.kerberos.login.config", "")%>" id="loginConfig" style="width:70%;padding:4px;"></td>
+            </tr>  
+            <tr>              
+                <td><label style="padding-left: 25px" for="krb5Config">KRB5 Config:</label></td>
+                <td><input type="text" name="krb5Config" value="<%=JiveGlobals.getProperty("ofchat.kerberos.krb5.config", "")%>" id="krb5Config" style="width:70%;padding:4px;"></td>
+            </tr>  
+            </table>
+            <br>            
+            <br> 
+            <input type="submit" value="Save Settings">           
+        </div>
+    </form>     
 </body>
 </html>

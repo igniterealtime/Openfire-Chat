@@ -143,14 +143,16 @@ public class BookmarkManager {
      * @param nickname of user who posts groupchat message.
      * @param body text of groupchat message.
      */
-    public static void broadcastMessage(JID roomJID, JID user, String nickname, String body, Bookmark bookmark)
+    public static void broadcastMessage(String roomJID, String userJID, String nickname, String body, Bookmark bookmark)
     {
+        Log.info("broadcastMessage " + roomJID + " " + userJID + " " + nickname + "\n" + body);
+
         Message message = new Message();
         message.setFrom(roomJID);
 
         Element notification = message.addChildElement("notification", "http://igniterealtime.org/ofchat/notification");
         notification.setText(body);
-        notification.addAttribute("jid", user.toBareJID());
+        notification.addAttribute("jid", userJID);
         notification.addAttribute("nickname", nickname);
 
         if (bookmark.isGlobalBookmark())
