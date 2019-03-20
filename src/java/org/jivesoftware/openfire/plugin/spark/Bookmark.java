@@ -31,7 +31,7 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
+import java.io.Serializable;
 import javax.ws.rs.core.Response;
 
 import org.jivesoftware.database.DbConnectionManager;
@@ -76,7 +76,7 @@ import org.jivesoftware.openfire.plugin.rest.entity.UserProperty;
 @XmlRootElement(name = "bookmark")
 @XmlType(propOrder = { "bookmarkID", "type", "name", "value", "globalBookmark", "users", "groups", "properties" })
 @JiveID(55)
-public class Bookmark {
+public class Bookmark implements Serializable {
 
     private static final Logger Log = LoggerFactory.getLogger(Bookmark.class);
 

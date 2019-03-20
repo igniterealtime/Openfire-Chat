@@ -23,3 +23,12 @@ out/
 nbproject/
 nbbuild/
 /bin/
+
+# Ignore Pade web app
+
+classes/apps/inverse
+classes/apps/jitsi-meet
+classes/apps/js
+classes/apps/options
+classes/apps/icon.png
+classes/apps/image.png

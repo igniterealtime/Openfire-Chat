@@ -25,7 +25,7 @@ public class Utils {
      * @return
      */
     public static byte[] savePublicKey(ECPublicKey publicKey) {
-        return publicKey.getQ().getEncoded(false);
+        return publicKey.getQ().getEncoded();
     }
 
     public static byte[] savePrivateKey(ECPrivateKey privateKey) {

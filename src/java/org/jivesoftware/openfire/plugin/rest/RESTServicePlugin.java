@@ -213,7 +213,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
         customAuthFilterClassName = JiveGlobals.getProperty("plugin.ofchat.customAuthFilter", "");
 
         // See if the service is enabled or not.
-        enabled = JiveGlobals.getBooleanProperty("plugin.ofchat.enabled", false);
+        enabled = JiveGlobals.getBooleanProperty("plugin.ofchat.enabled", true);
         smsEnabled = JiveGlobals.getBooleanProperty("ofchat.sms.enabled", false);
         emailEnabled = JiveGlobals.getBooleanProperty("ofchat.email.enabled", false);
         smsProvider = JiveGlobals.getProperty("ofchat.sms.provider", "mexmo");
@@ -281,6 +281,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
         context5 = new WebAppContext(null, pluginDirectory.getPath() + "/classes/dashboard", "/dashboard");
         context5.setClassLoader(this.getClass().getClassLoader());
+        context5.getMimeTypes().addMimeMapping("wasm", "application/wasm");
 
         if ( JiveGlobals.getBooleanProperty("ofmeet.security.enabled", true ) )
         {
@@ -302,6 +303,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
         context6 = new WebAppContext(null, pluginDirectory.getPath() + "/classes/apps", "/apps");
         context6.setClassLoader(this.getClass().getClassLoader());
+        context6.getMimeTypes().addMimeMapping("wasm", "application/wasm");
 
         final List<ContainerInitializer> initializers6 = new ArrayList<>();
         initializers6.add(new ContainerInitializer(new JettyJasperInitializer(), null));

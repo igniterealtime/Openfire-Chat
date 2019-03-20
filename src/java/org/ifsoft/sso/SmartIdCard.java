@@ -65,15 +65,11 @@ public class SmartIdCard extends HttpServlet
 
             Log.info("SmartIdCard access_token: \n" + json);
 
-            // {"access_token":"5ZhAaixZ5vHxLB5MQnjSmHqlYDFoSYescLrsMICV","token_type":"Bearer","expires_in":3600}
-
             if (json != null && json.has("access_token"))
             {
                 json = new JSONObject(get("https://id.smartid.ee/api/v2/user_data?access_token=" + json.getString("access_token")));
 
                 Log.info("SmartIdCard data: \n" + json);
-
-                // {“status”:”OK”,”idcode”:”46912302711?,”lastname”:”Kersti”,”firstname”:”Kaljulaid”,”email”:”president@eesti.ee”,”email_verified”:”true”,”last_login_method”:”est-idc”,”current_login_method”:”Facebook”}”
 
                 if (json != null && json.has("status") && "OK".equals(json.getString("status")) && json.has("idcode"))
                 {

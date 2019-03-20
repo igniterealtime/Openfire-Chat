@@ -1,0 +1,2585 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "version": "1.0",
+    "title": "TW-API",
+    "description": "TODO: Add Description",
+    "contact": {}
+  },
+  "host": "example.com",
+  "basePath": "/",
+  "securityDefinitions": {
+    "auth": {
+      "type": "oauth2",
+      "flow": "implicit",
+      "authorizationUrl": "http://example.com",
+      "scopes": {}
+    }
+  },
+  "schemes": [
+    "http",
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/borderless-accounts": {
+      "get": {
+        "description": "Get Accounts\n",
+        "summary": "GET /borderless-accounts",
+        "tags": [
+          "borderless"
+        ],
+        "operationId": "V1BorderlessAccountsGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "profileId",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/borderless-accounts/<accountId>/statement.json": {
+      "get": {
+        "description": "Get account statement\n",
+        "summary": "GET /borderless-accounts/{accountId}/statement",
+        "tags": [
+          "borderless"
+        ],
+        "operationId": "V1BorderlessAccountsAccountIdStatementJsonGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "currency",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "intervalStart",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "format": "date-time",
+            "description": ""
+          },
+          {
+            "name": "intervalEnd",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "format": "date-time",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/borderless-accounts/balance-currencies": {
+      "get": {
+        "description": "Get available currencies the user can open\n",
+        "summary": "GET /borderless-accounts/balance-currencies",
+        "tags": [
+          "borderless"
+        ],
+        "operationId": "V1BorderlessAccountsBalanceCurrenciesGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/account-requirements": {
+      "post": {
+        "description": "POST /account-requirements",
+        "summary": "POST /account-requirements",
+        "tags": [
+          "account-requirements"
+        ],
+        "operationId": "V1AccountRequirementsPost",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "source",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "target",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "sourceAmount",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int32",
+            "description": ""
+          },
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/POST~1account-requirementsRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      },
+      "get": {
+        "description": "GET /account-requirements",
+        "summary": "GET /account-requirements",
+        "tags": [
+          "account-requirements"
+        ],
+        "operationId": "V1AccountRequirementsGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "source",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "target",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "sourceAmount",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int32",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/quotes/<quoteId>/account-requirements": {
+      "get": {
+        "description": "TODO: Add Description",
+        "summary": "GET /quotes/{id}/account-requirements",
+        "tags": [
+          "account-requirements"
+        ],
+        "operationId": "V1QuotesQuoteIdAccountRequirementsGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      },
+      "post": {
+        "description": "POST /account-requirements",
+        "summary": "POST /account-requirements copy",
+        "tags": [
+          "account-requirements"
+        ],
+        "operationId": "V1QuotesQuoteIdAccountRequirementsPost",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/POST~1account-requirementscopyRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v2/accounts": {
+      "get": {
+        "description": "TODO: Add Description",
+        "summary": "GET /accounts",
+        "tags": [
+          "accounts"
+        ],
+        "operationId": "V2AccountsGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "currency",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v2/accounts/<accountId>": {
+      "get": {
+        "description": "TODO: Add Description",
+        "summary": "GET /accounts/{id}",
+        "tags": [
+          "accounts"
+        ],
+        "operationId": "V2AccountsAccountIdGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/accounts": {
+      "post": {
+        "description": "TODO: Add Description",
+        "summary": "POST /accounts",
+        "tags": [
+          "accounts"
+        ],
+        "operationId": "V1AccountsPost",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Content-type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/address-requirements": {
+      "get": {
+        "description": "TODO: Add Description",
+        "summary": "/v1/address-requirements",
+        "tags": [
+          "addresses"
+        ],
+        "operationId": "V1AddressRequirementsGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      },
+      "post": {
+        "description": "TODO: Add Description",
+        "summary": "/v1/address-requirements",
+        "tags": [
+          "addresses"
+        ],
+        "operationId": "V1AddressRequirementsPost",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/~1v1~1address-requirementsRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/addresses": {
+      "post": {
+        "description": "Saves address",
+        "summary": "/addresses",
+        "tags": [
+          "addresses"
+        ],
+        "operationId": "V1AddressesPost",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/businesses": {
+      "post": {
+        "description": "POST business endpoint",
+        "summary": "POST /businesses",
+        "tags": [
+          "businesses"
+        ],
+        "operationId": "V1BusinessesPost",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/POST~1businessesRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/roles/<roleId>": {
+      "put": {
+        "description": "PUT /roles/{id} endpoint",
+        "summary": "PUT /roles/{id}",
+        "tags": [
+          "businesses"
+        ],
+        "operationId": "V1RolesRoleIdPut",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      },
+      "get": {
+        "description": "GET /roles/{id} endpoint",
+        "summary": "GET /roles/{id}",
+        "tags": [
+          "businesses"
+        ],
+        "operationId": "V1RolesRoleIdGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/roles": {
+      "post": {
+        "description": "POST roles endpoint",
+        "summary": "POST /roles",
+        "tags": [
+          "businesses"
+        ],
+        "operationId": "V1RolesPost",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/delivery-estimates/<transferId>": {
+      "get": {
+        "description": "TODO: Add Description",
+        "summary": "GET Delivery Estimate",
+        "tags": [
+          "delivery estimation"
+        ],
+        "operationId": "V1DeliveryEstimatesTransferIdGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/oauth/token": {
+      "post": {
+        "description": "Request access token | authorization code grant type",
+        "summary": "POST /auth/token",
+        "tags": [
+          "oauth"
+        ],
+        "operationId": "OauthTokenPost",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "consumes": [
+          "application/x-www-form-urlencoded"
+        ],
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "grant_type",
+            "in": "formData",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "client_id",
+            "in": "formData",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "redirect_uri",
+            "in": "formData",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "code",
+            "in": "formData",
+            "required": true,
+            "type": "string",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/profiles": {
+      "get": {
+        "description": "Create a personal profile",
+        "summary": "GET /profiles",
+        "tags": [
+          "profiles"
+        ],
+        "operationId": "V1ProfilesGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      },
+      "post": {
+        "description": "Create a personal profile",
+        "summary": "POST /profiles",
+        "tags": [
+          "profiles"
+        ],
+        "operationId": "V1ProfilesPost",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/POST~1profilesRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/quotes": {
+      "get": {
+        "description": "TODO: Add Description",
+        "summary": "GET /quotes",
+        "tags": [
+          "quotes"
+        ],
+        "operationId": "V1QuotesGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "source",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "target",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "targetAmount",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int32",
+            "description": ""
+          },
+          {
+            "name": "rateType",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      },
+      "post": {
+        "description": "TODO: Add Description",
+        "summary": "POST /quotes",
+        "tags": [
+          "quotes"
+        ],
+        "operationId": "V1QuotesPost",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Content-type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "$ref": "#/definitions/POST~1quotesRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/quotes/<quoteId>": {
+      "get": {
+        "description": "TODO: Add Description",
+        "summary": "GET /quotes/{id}",
+        "tags": [
+          "quotes"
+        ],
+        "operationId": "V1QuotesQuoteIdGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/quotes/<quoteId>/pay-in-methods": {
+      "get": {
+        "description": "Pay-in-methods available for a given quote",
+        "summary": "GET /quotes/{id}/pay-in-methods",
+        "tags": [
+          "quotes"
+        ],
+        "operationId": "V1QuotesQuoteIdPayInMethodsGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/transfers": {
+      "post": {
+        "description": "TODO: Add Description",
+        "summary": "POST /transfers",
+        "tags": [
+          "transfers"
+        ],
+        "operationId": "V1TransfersPost",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      },
+      "get": {
+        "description": "TODO: Add Description",
+        "summary": "GET /transfers",
+        "tags": [
+          "transfers"
+        ],
+        "operationId": "V1TransfersGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int32",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/transfers/{transferId}": {
+      "get": {
+        "description": "TODO: Add Description",
+        "summary": "GET /transfers/{id}",
+        "tags": [
+          "transfers"
+        ],
+        "operationId": "V1TransfersByTransferIdGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "transferId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/transfer-requirements": {
+      "post": {
+        "description": "TODO: Add Description",
+        "summary": "POST /transfer-requirements",
+        "tags": [
+          "transfers"
+        ],
+        "operationId": "V1TransferRequirementsPost",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Content-type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/me": {
+      "get": {
+        "description": "TODO: Add Description",
+        "summary": "GET /me",
+        "tags": [
+          "user"
+        ],
+        "operationId": "V1MeGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      },
+      "put": {
+        "description": "Updates a user model",
+        "summary": "PUT /me",
+        "tags": [
+          "user"
+        ],
+        "operationId": "V1MePut",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/user/signup/registration_code": {
+      "post": {
+        "description": "TODO: Add Description",
+        "summary": "POST /v1/user/signup/registration_code",
+        "tags": [
+          "user"
+        ],
+        "operationId": "V1UserSignupRegistrationCodePost",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v2/users": {
+      "post": {
+        "description": "TODO: Add Description",
+        "summary": "POST /v2/user",
+        "tags": [
+          "user"
+        ],
+        "operationId": "V2UsersPost",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "Body",
+            "in": "body",
+            "required": true,
+            "description": "",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/terms/default": {
+      "get": {
+        "description": "TODO: Add Description",
+        "summary": "GET /terms",
+        "tags": [
+          "terms"
+        ],
+        "operationId": "V1TermsDefaultGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/validators/hungarian-account-number&accountNumber=121212121212121212121212": {
+      "get": {
+        "description": "GET /validators/hungarian-account-number endpoint\n",
+        "summary": "GET /validators/hungarian-account-number",
+        "tags": [
+          "validators"
+        ],
+        "operationId": "V1ValidatorsHungarianAccountNumberAccountNumber121212121212121212121212Get",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/validators/canadian-account-number&accountNumber= 0000000&institutionNumber= 003&transitNumber= 00000": {
+      "get": {
+        "description": "GET /validators/canadian-account-number endpoint\n",
+        "summary": "GET /validators/canadian-account-number",
+        "tags": [
+          "validators"
+        ],
+        "operationId": "V1ValidatorsCanadianAccountNumberAccountNumber0000000InstitutionNumber003TransitNumber00000Get",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/validators/canadian-institution-number": {
+      "get": {
+        "description": "GET /validators/canadian-institution-number endpoint\n",
+        "summary": "GET /validators/canadian-institution-number",
+        "tags": [
+          "validators"
+        ],
+        "operationId": "V1ValidatorsCanadianInstitutionNumberGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "institutionNumber",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int32",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/validators/polish-account-number": {
+      "get": {
+        "description": "GET /validators/polish-account-number endpoint\n",
+        "summary": "GET /validators/polish-account-number",
+        "tags": [
+          "validators"
+        ],
+        "operationId": "V1ValidatorsPolishAccountNumberGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "accountNumber",
+            "in": "query",
+            "required": true,
+            "type": "number",
+            "format": "double",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/validators/abartn": {
+      "get": {
+        "description": "GET /validators/abartn endpoint\n",
+        "summary": "GET /validators/abartn",
+        "tags": [
+          "validators"
+        ],
+        "operationId": "V1ValidatorsAbartnGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "abartn",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/validators/bankgiro-number": {
+      "get": {
+        "description": "GET /validators/bankgiro-number endpoint\n",
+        "summary": "GET /validators/bankgiro-number",
+        "tags": [
+          "validators"
+        ],
+        "operationId": "V1ValidatorsBankgiroNumberGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "bankgiroNumber",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int32",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/validators/sort-code-account-number": {
+      "get": {
+        "description": "GET /validators/sort-code-account-number endpoint\n",
+        "summary": "GET /validators/sort-code-account-number",
+        "tags": [
+          "validators"
+        ],
+        "operationId": "V1ValidatorsSortCodeAccountNumberGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "accountNumber",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int32",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/validators/sort-code": {
+      "get": {
+        "description": "GET /validators/sort-code endpoint\n",
+        "summary": "GET /validators/sort-code",
+        "tags": [
+          "validators"
+        ],
+        "operationId": "V1ValidatorsSortCodeGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "sortCode",
+            "in": "query",
+            "required": true,
+            "type": "integer",
+            "format": "int32",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/validators/bic": {
+      "get": {
+        "description": "GET /validators/bic endpoint",
+        "summary": "GET /validators/bic",
+        "tags": [
+          "validators"
+        ],
+        "operationId": "V1ValidatorsBicGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "iban",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "description": ""
+          },
+          {
+            "name": "bic",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/v1/validators/iban": {
+      "get": {
+        "description": "GET /validators/iban endpoint",
+        "summary": "GET /validators/iban",
+        "tags": [
+          "validators"
+        ],
+        "operationId": "V1ValidatorsIbanGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "name": "iban",
+            "in": "query",
+            "required": true,
+            "type": "string",
+            "description": ""
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "description": "TODO: Add Description",
+        "summary": "health",
+        "tags": [
+          "Misc"
+        ],
+        "operationId": "HealthGet",
+        "deprecated": false,
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "auth": []
+          }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "POST/account-requirementsRequest": {
+      "title": "POST/account-requirementsRequest",
+      "example": {
+        "details": {
+          "address": {
+            "country": "US"
+          }
+        }
+      },
+      "type": "object",
+      "properties": {
+        "details": {
+          "$ref": "#/definitions/Details"
+        }
+      },
+      "required": [
+        "details"
+      ]
+    },
+    "Details": {
+      "title": "Details",
+      "type": "object",
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/Address"
+        }
+      },
+      "required": [
+        "address"
+      ]
+    },
+    "Address": {
+      "title": "Address",
+      "type": "object",
+      "properties": {
+        "country": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "country"
+      ]
+    },
+    "POST/account-requirementscopyRequest": {
+      "title": "POST/account-requirementscopyRequest",
+      "example": {
+        "type": "bangladesh",
+        "details": {
+          "bankCode": "025",
+          "legalType": "PRIVATE",
+          "branchCode": "025060009",
+          "accountNumber": "0000000000"
+        }
+      },
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "details": {
+          "$ref": "#/definitions/Details1"
+        }
+      },
+      "required": [
+        "type",
+        "details"
+      ]
+    },
+    "Details1": {
+      "title": "Details1",
+      "type": "object",
+      "properties": {
+        "bankCode": {
+          "type": "string"
+        },
+        "legalType": {
+          "type": "string"
+        },
+        "branchCode": {
+          "type": "string"
+        },
+        "accountNumber": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bankCode",
+        "legalType",
+        "branchCode",
+        "accountNumber"
+      ]
+    },
+    "POST/accountsUKRAINERequest": {
+      "title": "POST/accountsUKRAINERequest",
+      "example": {
+        "accountHolderName": "Joe Bangladesh",
+        "currency": "UAH",
+        "country": "UA",
+        "type": "privatbank",
+        "details": {
+          "legalType": "private",
+          "phoneNumber": "+380000000000",
+          "accountNumber": "1234"
+        }
+      },
+      "type": "object",
+      "properties": {
+        "accountHolderName": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "details": {
+          "$ref": "#/definitions/Details2"
+        }
+      },
+      "required": [
+        "accountHolderName",
+        "currency",
+        "country",
+        "type",
+        "details"
+      ]
+    },
+    "Details2": {
+      "title": "Details2",
+      "type": "object",
+      "properties": {
+        "legalType": {
+          "type": "string"
+        },
+        "phoneNumber": {
+          "type": "string"
+        },
+        "accountNumber": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "legalType",
+        "phoneNumber",
+        "accountNumber"
+      ]
+    },
+    "POST/accountsCanadianRequest": {
+      "title": "POST/accountsCanadianRequest",
+      "example": {
+        "accountHolderName": "Name Here",
+        "currency": "CAD",
+        "country": "CA",
+        "type": "CANADIAN",
+        "details": {
+          "accountNumber": "0000000",
+          "institutionNumber": "003",
+          "transitNumber": "12345",
+          "accountType": "Checking"
+        }
+      },
+      "type": "object",
+      "properties": {
+        "accountHolderName": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "details": {
+          "$ref": "#/definitions/Details3"
+        }
+      },
+      "required": [
+        "accountHolderName",
+        "currency",
+        "country",
+        "type",
+        "details"
+      ]
+    },
+    "Details3": {
+      "title": "Details3",
+      "type": "object",
+      "properties": {
+        "accountNumber": {
+          "type": "string"
+        },
+        "institutionNumber": {
+          "type": "string"
+        },
+        "transitNumber": {
+          "type": "string"
+        },
+        "accountType": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountNumber",
+        "institutionNumber",
+        "transitNumber",
+        "accountType"
+      ]
+    },
+    "POST/accountsHungarianRequest": {
+      "title": "POST/accountsHungarianRequest",
+      "example": {
+        "accountHolderName": "Name Here",
+        "currency": "HUF",
+        "country": "HU",
+        "type": "HUNGARIAN",
+        "details": {
+          "accountNumber": "000000000000000000000000"
+        }
+      },
+      "type": "object",
+      "properties": {
+        "accountHolderName": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "details": {
+          "$ref": "#/definitions/Details4"
+        }
+      },
+      "required": [
+        "accountHolderName",
+        "currency",
+        "country",
+        "type",
+        "details"
+      ]
+    },
+    "Details4": {
+      "title": "Details4",
+      "type": "object",
+      "properties": {
+        "accountNumber": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "accountNumber"
+      ]
+    },
+    "POST/accountsPolishRequest": {
+      "title": "POST/accountsPolishRequest",
+      "example": {
+        "accountHolderName": "Name Here",
+        "currency": "PLN",
+        "country": "PL",
+        "type": "POLISH",
+        "details": {
+          "accountNumber": "12345678912345678912345678"
+        }
+      },
+      "type": "object",
+      "properties": {
+        "accountHolderName": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "details": {
+          "$ref": "#/definitions/Details4"
+        }
+      },
+      "required": [
+        "accountHolderName",
+        "currency",
+        "country",
+        "type",
+        "details"
+      ]
+    },
+    "POST/accountsITIBANRequest": {
+      "title": "POST/accountsITIBANRequest",
+      "example": {
+        "accountHolderName": "Name Here",
+        "currency": "EUR",
+        "type": "iban",
+        "country": "IT",
+        "details": {
+          "IBAN": "IT 00 H 00000 00000 000000000000"
+        }
+      },
+      "type": "object",
+      "properties": {
+        "accountHolderName": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "details": {
+          "$ref": "#/definitions/Details6"
+        }
+      },
+      "required": [
+        "accountHolderName",
+        "currency",
+        "type",
+        "country",
+        "details"
+      ]
+    },
+    "Details6": {
+      "title": "Details6",
+      "type": "object",
+      "properties": {
+        "IBAN": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "IBAN"
+      ]
+    },
+    "POST/accountsDEIBANRequest": {
+      "title": "POST/accountsDEIBANRequest",
+      "example": {
+        "accountHolderName": "Name Here",
+        "currency": "EUR",
+        "type": "IBAN",
+        "country": "DE",
+        "details": {
+          "legalType": "PRIVATE",
+          "IBAN": "DE00000000000000000000"
+        }
+      },
+      "type": "object",
+      "properties": {
+        "accountHolderName": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "details": {
+          "$ref": "#/definitions/Details7"
+        }
+      },
+      "required": [
+        "accountHolderName",
+        "currency",
+        "type",
+        "country",
+        "details"
+      ]
+    },
+    "Details7": {
+      "title": "Details7",
+      "type": "object",
+      "properties": {
+        "legalType": {
+          "type": "string"
+        },
+        "IBAN": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "legalType",
+        "IBAN"
+      ]
+    },
+    "POST/accountsGBPRequest": {
+      "title": "POST/accountsGBPRequest",
+      "example": {
+        "accountHolderName": "Name Here",
+        "currency": "GBP",
+        "type": "sort_code",
+        "country": "GB",
+        "details": {
+          "legalType": "PRIVATE",
+          "sortCode": "040004",
+          "accountNumber": "00000000"
+        }
+      },
+      "type": "object",
+      "properties": {
+        "accountHolderName": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "details": {
+          "$ref": "#/definitions/Details8"
+        }
+      },
+      "required": [
+        "accountHolderName",
+        "currency",
+        "type",
+        "country",
+        "details"
+      ]
+    },
+    "Details8": {
+      "title": "Details8",
+      "type": "object",
+      "properties": {
+        "legalType": {
+          "type": "string"
+        },
+        "sortCode": {
+          "type": "string"
+        },
+        "accountNumber": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "legalType",
+        "sortCode",
+        "accountNumber"
+      ]
+    },
+    "POST/accountsSEKRequest": {
+      "title": "POST/accountsSEKRequest",
+      "example": {
+        "accountHolderName": "Name Here",
+        "currency": "SEK",
+        "type": "sweden_local",
+        "country": "SE",
+        "details": {
+          "legalType": "PRIVATE",
+          "clearingNumber": 0,
+          "accountNumber": "0000000000",
+          "address": {
+            "firstLine": "1123 Fake St",
+            "city": "Stockholm",
+            "country": "SE",
+            "postCode": "1234"
+          }
+        }
+      },
+      "type": "object",
+      "properties": {
+        "accountHolderName": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "details": {
+          "$ref": "#/definitions/Details9"
+        }
+      },
+      "required": [
+        "accountHolderName",
+        "currency",
+        "type",
+        "country",
+        "details"
+      ]
+    },
+    "Details9": {
+      "title": "Details9",
+      "type": "object",
+      "properties": {
+        "legalType": {
+          "type": "string"
+        },
+        "clearingNumber": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "accountNumber": {
+          "type": "string"
+        },
+        "address": {
+          "$ref": "#/definitions/Address1"
+        }
+      },
+      "required": [
+        "legalType",
+        "clearingNumber",
+        "accountNumber",
+        "address"
+      ]
+    },
+    "Address1": {
+      "title": "Address1",
+      "type": "object",
+      "properties": {
+        "firstLine": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "postCode": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "firstLine",
+        "city",
+        "country",
+        "postCode"
+      ]
+    },
+    "POST/accountsABA(usd)Request": {
+      "title": "POST/accountsABA(usd)Request",
+      "example": {
+        "accountHolderName": "Name Here",
+        "currency": "USD",
+        "country": "US",
+        "type": "ABA",
+        "details": {
+          "address": {
+            "city": "New York",
+            "countryCode": "US",
+            "postCode": "00000",
+            "state": "NY",
+            "firstLine": "1 Fake Street"
+          },
+          "abartn": "321161184",
+          "accountType": "CHECKING",
+          "accountNumber": "00000000000",
+          "email": "example@foobar.com"
+        }
+      },
+      "type": "object",
+      "properties": {
+        "accountHolderName": {
+          "type": "string"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "details": {
+          "$ref": "#/definitions/Details10"
+        }
+      },
+      "required": [
+        "accountHolderName",
+        "currency",
+        "country",
+        "type",
+        "details"
+      ]
+    },
+    "Details10": {
+      "title": "Details10",
+      "type": "object",
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/Address2"
+        },
+        "abartn": {
+          "type": "string"
+        },
+        "accountType": {
+          "type": "string"
+        },
+        "accountNumber": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "abartn",
+        "accountType",
+        "accountNumber",
+        "email"
+      ]
+    },
+    "Address2": {
+      "title": "Address2",
+      "type": "object",
+      "properties": {
+        "city": {
+          "type": "string"
+        },
+        "countryCode": {
+          "type": "string"
+        },
+        "postCode": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "firstLine": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "city",
+        "countryCode",
+        "postCode",
+        "state",
+        "firstLine"
+      ]
+    },
+    "/v1/address-requirementsRequest": {
+      "title": "/v1/address-requirementsRequest",
+      "example": {
+        "details": {
+          "country": "IE"
+        }
+      },
+      "type": "object",
+      "properties": {
+        "details": {
+          "$ref": "#/definitions/Details11"
+        }
+      },
+      "required": [
+        "details"
+      ]
+    },
+    "Details11": {
+      "title": "Details11",
+      "type": "object",
+      "properties": {
+        "country": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "country"
+      ]
+    },
+    "POST/businessesRequest": {
+      "title": "POST/businessesRequest",
+      "example": {
+        "name": "Test Business",
+        "number": "12345",
+        "category": "other",
+        "webpage": "<URL here>",
+        "details": {
+          "address": {
+            "country": "EE",
+            "firstLine": "Address first line",
+            "city": "Tallinn",
+            "postCode": "12345"
+          },
+          "type": "other"
+        }
+      },
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "number": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "webpage": {
+          "type": "string"
+        },
+        "details": {
+          "$ref": "#/definitions/Details12"
+        }
+      },
+      "required": [
+        "name",
+        "number",
+        "category",
+        "webpage",
+        "details"
+      ]
+    },
+    "Details12": {
+      "title": "Details12",
+      "type": "object",
+      "properties": {
+        "address": {
+          "$ref": "#/definitions/Address1"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "address",
+        "type"
+      ]
+    },
+    "POST/profilesRequest": {
+      "title": "POST/profilesRequest",
+      "example": {
+        "type": "personal",
+        "details": {
+          "firstName": "Joe",
+          "lastName": "Bloggs",
+          "dateOfBirth": "1990-01-01",
+          "phoneNumber": "+447700000000"
+        }
+      },
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "details": {
+          "$ref": "#/definitions/Details13"
+        }
+      },
+      "required": [
+        "type",
+        "details"
+      ]
+    },
+    "Details13": {
+      "title": "Details13",
+      "type": "object",
+      "properties": {
+        "firstName": {
+          "type": "string"
+        },
+        "lastName": {
+          "type": "string"
+        },
+        "dateOfBirth": {
+          "type": "string"
+        },
+        "phoneNumber": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "firstName",
+        "lastName",
+        "dateOfBirth",
+        "phoneNumber"
+      ]
+    },
+    "POST/quotesRequest": {
+      "title": "POST/quotesRequest",
+      "example": {
+        "source": "GBP",
+        "target": "EUR",
+        "sourceAmount": "100",
+        "rateType": "FIXED"
+      },
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "sourceAmount": {
+          "type": "string"
+        },
+        "rateType": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "target",
+        "sourceAmount",
+        "rateType"
+      ]
+    }
+  },
+  "tags": [
+    {
+      "name": "borderless"
+    },
+    {
+      "name": "account-requirements"
+    },
+    {
+      "name": "accounts"
+    },
+    {
+      "name": "addresses"
+    },
+    {
+      "name": "businesses"
+    },
+    {
+      "name": "delivery estimation"
+    },
+    {
+      "name": "oauth"
+    },
+    {
+      "name": "profiles"
+    },
+    {
+      "name": "quotes"
+    },
+    {
+      "name": "transfers"
+    },
+    {
+      "name": "user"
+    },
+    {
+      "name": "terms"
+    },
+    {
+      "name": "validators"
+    },
+    {
+      "name": "Misc",
+      "description": ""
+    }
+  ]
+}

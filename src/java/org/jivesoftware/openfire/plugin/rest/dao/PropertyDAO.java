@@ -40,8 +40,8 @@ public class PropertyDAO {
      */
     public static List<String> getUsernameByProperty(String propertyName, String propertyValue) throws ServiceException
     {
-        List<String> usernames = new ArrayList<String>();
-        Cache<String, List<String>> propCache = CacheFactory.createLocalCache("User Properties");
+        ArrayList<String> usernames = new ArrayList<String>();
+        Cache<String, ArrayList<String>> propCache = CacheFactory.createLocalCache("User Properties");
 
         if (propertyValue != null)
         {

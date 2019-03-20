@@ -1,25 +1,13 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!--
-  ~ Copyright (c) 2017 Ignite Realtime Foundation. All rights reserved.
-  ~
-  ~ Licensed under the Apache License, Version 2.0 (the "License");
-  ~ you may not use this file except in compliance with the License.
-  ~ You may obtain a copy of the License at
-  ~
-  ~      http://www.apache.org/licenses/LICENSE-2.0
-  ~
-  ~ Unless required by applicable law or agreed to in writing, software
-  ~ distributed under the License is distributed on an "AS IS" BASIS,
-  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  ~ See the License for the specific language governing permissions and
-  ~ limitations under the License.
-  -->
-
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
-
-    <groupId>org.igniterealtime.openfire.ofchat</groupId>
+    <parent>
+        <artifactId>plugins</artifactId>
+        <groupId>org.igniterealtime.openfire</groupId>
+        <version>4.3.0</version>
+    </parent>
+    
+    <groupId>org.igniterealtime.openfire.plugins</groupId>
     <artifactId>ofchat</artifactId>
     <version>0.9.5-SNAPSHOT</version>
 
@@ -36,14 +24,9 @@
         </developer>        
     </developers>
 
-    <properties>
-        <openfire.version>4.2.0</openfire.version>
-    </properties>
-    
     <build>
         <sourceDirectory>src/java</sourceDirectory>
-        <plugins>   
-
+        <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -54,96 +37,26 @@
                       <fork>true</fork>
                       <compilerArgument>-XDignore.symbol.file</compilerArgument>                    
                 </configuration>
-            </plugin>
-            
+            </plugin>        
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
-                <version>2.6</version>
-                <dependencies>
-                    <dependency>
-                    <groupId>org.igniterealtime.openfire.plugins</groupId>
-                    <artifactId>openfire-plugin-assembly-descriptor</artifactId>
-                    <version>${openfire.version}</version>
-                    </dependency>
-                </dependencies>
-                <executions>
-                    <execution>
-                    <id>make-assembly</id>
-                    <phase>package</phase>
-                    <goals>
-                        <goal>single</goal>
-                    </goals>
-                    <configuration>
-                        <appendAssemblyId>false</appendAssemblyId>
-                        <finalName>${project.artifactId}</finalName>
-                        <attach>false</attach>
-                        <!-- This is where we use our shared assembly descriptor -->
-                        <descriptorRefs>
-                        <descriptorRef>openfire-plugin-assembly</descriptorRef>
-                        </descriptorRefs>
-                    </configuration>
-                    </execution>
-                </executions>
             </plugin>
-
-            <!-- Compile the JSP pages -->
             <plugin>
                 <groupId>org.eclipse.jetty</groupId>
                 <artifactId>jetty-jspc-maven-plugin</artifactId>
                 <version>9.2.14.v20151106</version>
-                <configuration>
-                    <webAppSourceDirectory>${project.build.sourceDirectory}/../web</webAppSourceDirectory>
-                    <webXml>${project.build.sourceDirectory}/../web/WEB-INF/web.xml</webXml>
-                    <keepSources>true</keepSources>
-                </configuration>
-                <executions>
-                    <execution>
-                    <id>jspc</id>
-                    <goals>
-                        <goal>jspc</goal>
-                    </goals>
-                    <configuration>
-                        <keepSources>true</keepSources>                    
-                        <jspc>
-                        <package>org.jivesoftware.openfire.plugin.${project.artifactId}</package>
-                        </jspc>
-                    </configuration>
-                    </execution>
-                </executions>
                 <dependencies>
                     <dependency>
-                    <groupId>org.igniterealtime.openfire</groupId>
-                    <artifactId>xmppserver</artifactId>
-                    <version>${openfire.version}</version>
-                    </dependency>
-                    <dependency>
-                    <groupId>org.igniterealtime.openfire</groupId>
-                    <artifactId>webadmintld</artifactId>
-                    <version>${openfire.version}</version>
+                        <groupId>org.igniterealtime.openfire</groupId>
+                        <artifactId>xmppserver</artifactId>
+                        <version>${openfire.version}</version>
                     </dependency>
                 </dependencies>
-            </plugin>
-
-            <!-- Fix for Mina 2.x -->
-            <!-- https://issues.apache.org/jira/browse/DIRMINA-919 -->
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <version>3.0.0</version>
-                <extensions>true</extensions>
             </plugin>
         </plugins>
     </build>
 
     <dependencies>
-        <dependency>
-            <groupId>org.igniterealtime.openfire</groupId>
-            <artifactId>xmppserver</artifactId>
-            <version>${openfire.version}</version>            
-            <scope>provided</scope>
-        </dependency> 
-
         <dependency>
             <groupId>org.igniterealtime.smack</groupId>
             <artifactId>smack-java7</artifactId>
@@ -328,7 +241,7 @@
         <dependency>
             <groupId>org.eclipse.jetty.fcgi</groupId>
             <artifactId>fcgi-server</artifactId>
-            <version>9.2.14.v20151106</version>
+            <version>9.4.12.v20180830</version>
         </dependency>
         
         <!-- https://mvnrepository.com/artifact/com.j256.two-factor-auth/two-factor-auth -->
@@ -406,7 +319,26 @@
             <!-- NB. Later versions are available at com.itextpdf:itextpdf but require code changes -->
             <version>2.0.8</version>
         </dependency>        
-        
     </dependencies>
 
+    <repositories>
+        <!-- Where dependencies are obtained (such as the parent project). -->
+        <repository>
+            <id>igniterealtime</id>
+            <name>Ignite Realtime Repository</name>
+            <url>https://igniterealtime.org/archiva/repository/maven/</url>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <!-- Typically used to retrieve Maven plugins that are used by this project.
+             This apparently is also used to botain the dependencies _used by_ these
+             plugins (such as the openfire-plugin-assembly-descriptor, needed to
+             package the project as an Openfire plugin!) -->
+        <pluginRepository>
+            <id>igniterealtime</id>
+            <name>Ignite Realtime Repository</name>
+            <url>https://igniterealtime.org/archiva/repository/maven/</url>
+        </pluginRepository>
+    </pluginRepositories>
 </project>
