@@ -163,7 +163,11 @@ public class EmailListener {
             Log.info("SMTP Listener started");
 
             try {
-                smtpServer = SMTPServer.port(Integer.valueOf(JiveGlobals.getProperty("ofmeet.email.listener.smtp.port", "25000")))
+                final InetAddress bindingAddress = InetAddress.getByName(JiveGlobals.getProperty("xmpp.socket.plain.interface", XMPPServer.getInstance().getServerInfo().getHostname()));
+
+                smtpServer = SMTPServer
+                  .port(Integer.valueOf(JiveGlobals.getProperty("ofmeet.email.listener.smtp.port", "25000")))
+                  .bindAddress(bindingAddress)
                   .messageHandlerFactory(new SimpleMessageListenerAdapter(new SimpleMessageListenerImpl()))
                   .build();
 

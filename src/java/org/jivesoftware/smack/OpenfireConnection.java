@@ -724,7 +724,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
                     if (autoStarted)
                     {
-                        MeetController.getInstance().postWebPush(getUsername(), "{\"title\":\"" + message.getFrom() + "\", \"message\": \"" + message.getBody() + "\"}");
+                        MeetController.getInstance().postWebPush(getUsername(), "{\"title\":\"" + message.getFrom() + "\", \"url\": \"\", \"message\": \"" + message.getBody() + "\"}");
                     }
                 }
                 else {

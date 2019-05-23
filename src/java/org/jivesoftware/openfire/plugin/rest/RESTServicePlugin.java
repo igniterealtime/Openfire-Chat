@@ -116,6 +116,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     private static final String CUSTOM_AUTH_FILTER_PROPERTY_NAME = "plugin.ofchat.customAuthFilter";
     private static final UserManager userManager = XMPPServer.getInstance().getUserManager().getInstance();
+    private static final PresenceManager presenceManager = XMPPServer.getInstance().getPresenceManager();
     private static final String SERVER = XMPPServer.getInstance().getServerInfo().getHostname();
     private static final String DOMAIN = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
     private static final RosterManager ROSTER_MANAGER = XMPPServer.getInstance().getRosterManager();
@@ -432,58 +433,61 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
         executor = Executors.newCachedThreadPool();
 
-        executor.submit(new Callable<Boolean>()
+        if ( JiveGlobals.getBooleanProperty("webpush.subscribe.session", false ) )
         {
-            public Boolean call() throws Exception
+            executor.submit(new Callable<Boolean>()
             {
-                Log.info("Bootstrap auto-join conferences");
-
-                UserEntities userEntities = UserServiceController.getInstance().getUserEntitiesByProperty("webpush.subscribe.%", null);
-                boolean isBookmarksAvailable = XMPPServer.getInstance().getPluginManager().getPlugin("bookmarks") != null;
-                Collection<Bookmark> bookmarks = null;
-
-                if (isBookmarksAvailable)
+                public Boolean call() throws Exception
                 {
-                    bookmarks = BookmarkManager.getBookmarks();
-                }
+                    Log.info("Bootstrap auto-join conferences");
 
-                for (UserEntity user : userEntities.getUsers())
-                {
-                    String username = user.getUsername();
+                    UserEntities userEntities = UserServiceController.getInstance().getUserEntitiesByProperty("webpush.subscribe.%", null);
+                    boolean isBookmarksAvailable = XMPPServer.getInstance().getPluginManager().getPlugin("bookmarks") != null;
+                    Collection<Bookmark> bookmarks = null;
 
-                    try {
-                        OpenfireConnection connection = OpenfireConnection.createConnection(username, null, false);
+                    if (isBookmarksAvailable)
+                    {
+                        bookmarks = BookmarkManager.getBookmarks();
+                    }
 
-                        if (connection != null)
-                        {
-                            Log.info("Auto-login for user " + username + " sucessfull");
-                            connection.autoStarted = true;
+                    for (UserEntity user : userEntities.getUsers())
+                    {
+                        String username = user.getUsername();
 
-                            if (bookmarks != null)
+                        try {
+                            OpenfireConnection connection = OpenfireConnection.createConnection(username, null, false);
+
+                            if (connection != null)
                             {
-                                for (Bookmark bookmark : bookmarks)
-                                {
-                                    boolean addBookmarkForUser = bookmark.isGlobalBookmark() || isBookmarkForJID(username, bookmark);
+                                Log.info("Auto-login for user " + username + " successfull");
+                                connection.autoStarted = true;
 
-                                    if (addBookmarkForUser)
+                                if (bookmarks != null)
+                                {
+                                    for (Bookmark bookmark : bookmarks)
                                     {
-                                        if (bookmark.getType() == Bookmark.Type.group_chat)
+                                        boolean addBookmarkForUser = bookmark.isGlobalBookmark() || isBookmarkForJID(username, bookmark);
+
+                                        if (addBookmarkForUser)
                                         {
-                                            connection.joinRoom(bookmark.getValue(), username);
+                                            if (bookmark.getType() == Bookmark.Type.group_chat)
+                                            {
+                                                connection.joinRoom(bookmark.getValue(), username);
+                                            }
                                         }
                                     }
                                 }
+
                             }
 
+                        } catch (Exception e) {
+                            Log.warn("Auto-login for user " + username + " failed");
                         }
-
-                    } catch (Exception e) {
-                        Log.warn("Auto-login for user " + username + " failed");
                     }
+                    return true;
                 }
-                return true;
-            }
-        });
+            });
+        }
 
         Log.info("Create recordings folder");
         checkRecordingsFolder();
@@ -1113,13 +1117,21 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
                         if (fromUser == null)
                         {
-                            String name = childElement.attributeValue("name");
-                            String subject = childElement.attributeValue("subject");
                             String email = childElement.attributeValue("email");
-                            String body = childElement.getText();
 
                             registrations.put(email, iq);
-                            MeetService.sendEmailMessage(null, email, name, from, subject, body, null);
+
+                            if (JiveGlobals.getBooleanProperty("register.inband", false))   // no email validation required
+                            {
+                                emailIncoming(email, null, null);
+                            }
+                            else {
+                                String name = childElement.attributeValue("name");
+                                String subject = childElement.attributeValue("subject");
+                                String body = childElement.getText();
+
+                                MeetService.sendEmailMessage(null, email, name, from, subject, body, null);
+                            }
 
                         } else {
                             IQ reply = IQ.createResultIQ(iq);
@@ -1154,19 +1166,47 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             final JID toJID = message.getTo();
             final String body = message.getBody();
 
-            if (body != null && Message.Type.chat == message.getType())
+            if (body != null && fromJID != null && toJID != null)
             {
-                if (fromJID.getNode() != null && toJID.getNode() != null && DOMAIN.equals(fromJID.getDomain()) && DOMAIN.equals(toJID.getDomain()))
+                if (fromJID.getNode() != null && toJID.getNode() != null  && DOMAIN.equals(toJID.getDomain()))
                 {
                     try {
-                        String from = fromJID.getNode().toString();
-                        String to = JID.unescapeNode(toJID.getNode().toString());
+                        String from = fromJID.getNode();
+                        String to = JID.unescapeNode(toJID.getNode());
 
                         User fromUser = null;
+                        try {fromUser = userManager.getUser(from);} catch (Exception e3) {}
 
-                        try {fromUser = userManager.getUser(from);} catch (Exception e1) {}
+                        User toUser = null;
+                        try {toUser = userManager.getUser(to);} catch (Exception e2) {}
 
-                        if (fromUser != null)
+                        boolean available = presenceManager.isAvailable(toUser);
+
+                        Log.debug("intercepted message from {} to {}, recipient is available {}\n{}", new Object[]{from, to, available, body});
+
+                        if (toUser != null && !available)
+                        {
+                            // web push
+
+                            String pushUrl = "./index.html#converse/chat?jid=" + fromJID.toBareJID();
+                            String pushBody = body;
+                            String pushName = from;
+
+                            if (fromUser != null && !fromUser.getName().equals("")) pushName = fromUser.getName();
+
+                            Element notification = message.getChildElement("notification", "http://igniterealtime.org/ofchat/notification");
+
+                            if (notification != null)
+                            {
+                                pushUrl = "./index.html#converse/room?jid=" + fromJID.toBareJID();
+                                pushName = notification.attributeValue("nickname");
+                                pushBody = notification.getText();
+                            }
+
+                            MeetController.getInstance().postWebPush(to, "{\"title\":\"" + pushName + "\", \"url\": \"" + pushUrl + "\", \"message\": \"" + pushBody + "\"}");
+                        }
+
+                        if (fromUser != null && DOMAIN.equals(fromJID.getDomain()) && Message.Type.chat == message.getType())
                         {
                             String smsFrom = fromUser.getProperties().get("sms_out_number");
 
@@ -1183,8 +1223,6 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
                                 } else {                    // forward to SMS of reciever if available
                                                             // TODO - check presence. if online don't forward
 
-                                    User toUser = null;
-                                    try {toUser = userManager.getUser(to);} catch (Exception e1) {}
                                     if (toUser != null) smsTo = toUser.getProperties().get("sms_in_number");
                                 }
 
