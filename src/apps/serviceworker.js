@@ -18,9 +18,9 @@ self.addEventListener('activate', function (event) {
 
 
 // fetch trigger - serve from cache or fetch from server, cache the file if not previously cached
-// fix Request method 'PUT' is unsupported error in line 26
+
 self.addEventListener('fetch', function(event) {
-  event.respondWith(
+  if (event.request.method == "GET") event.respondWith(
     fetch(event.request).then(function(response) {
       return caches.open('offline').then(function(cache) {
           try {
