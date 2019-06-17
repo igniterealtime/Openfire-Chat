@@ -5,48 +5,31 @@ window.addEventListener("load", function()
       console.log("Notification.requestPermission", result);
     });
 
+    // branding overrides
+
+    var overrides = Object.getOwnPropertyNames(branding);
+
+    console.debug("branding - start", overrides, branding);
+
+    for (var i=0; i<overrides.length; i++)
+    {
+        var setting = overrides[i];
+        var override = branding[setting];
+
+        if (override.value != null && override.value != undefined)
+        {
+            if (!window.localStorage["store.settings." + setting])  // override default value
+            {
+                window.localStorage["store.settings." + setting] = JSON.stringify(override.value);
+            }
+        }
+
+        console.debug("branding - found", i, setting, override.value, override.disable, window.localStorage["store.settings." + setting]);
+    }
+
     document.getElementById("inverse").src="inverse/index.html" + location.hash;
     document.title = chrome.i18n.getMessage('manifest_shortExtensionName') + " - " + chrome.runtime.getManifest().version;
 });
-
-function getCredentials(callback)
-{
-    if (navigator.credentials)
-    {
-        navigator.credentials.get({password: true, federated: {providers: [ 'https://accounts.google.com' ]}, mediation: "silent"}).then(function(credential)
-        {
-            console.log("credential management api get", credential);
-            if (callback) callback(credential);
-
-        }).catch(function(err){
-            console.error ("credential management api get error", err);
-            if (callback) callback();
-        });
-    }
-    else {
-        if (callback) callback();
-    }
-}
-
-function setCredentials(creds)
-{
-    if (navigator.credentials)
-    {
-        navigator.credentials.create({password: creds}).then(function(credential)
-        {
-            navigator.credentials.store(credential).then(function()
-            {
-                console.log("credential management api put", credential);
-
-            }).catch(function (err) {
-                console.error("credential management api put error", err);
-            });
-
-        }).catch(function (err) {
-            console.error("credential management api put error", err);
-        });
-    }
-}
 
 var webpush = (function(push)
 {
