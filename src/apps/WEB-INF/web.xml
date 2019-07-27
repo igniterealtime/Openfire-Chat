@@ -3,7 +3,17 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
          version="3.1">
-         
+
+    <servlet>
+        <servlet-name>download</servlet-name>
+        <servlet-class>org.ifsoft.download.Servlet</servlet-class>
+    </servlet>
+
+    <servlet-mapping>
+        <servlet-name>download</servlet-name>
+        <url-pattern>/download</url-pattern>
+    </servlet-mapping>  
+    
     <servlet>
         <servlet-name>nexmo</servlet-name>
         <servlet-class>org.ifsoft.sms.nexmo.Servlet</servlet-class>

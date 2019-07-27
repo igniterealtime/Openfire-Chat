@@ -123,6 +123,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
     private static final MessageRouter MESSAGE_ROUTER = XMPPServer.getInstance().getMessageRouter();
 
     private static Map<String, IQ>  registrations = new HashMap<String, IQ>();
+    private static Map<String, String> pushTracker = new HashMap<String, String>();
 
     /** The authentication secret. */
     private String secret;
@@ -1184,7 +1185,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
                         Log.debug("intercepted message from {} to {}, recipient is available {}\n{}", new Object[]{from, to, available, body});
 
-                        if (toUser != null && !available)
+                        if (toUser != null)
                         {
                             // web push
 
@@ -1203,7 +1204,23 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
                                 pushBody = notification.getText();
                             }
 
-                            MeetController.getInstance().postWebPush(to, "{\"title\":\"" + pushName + "\", \"url\": \"" + pushUrl + "\", \"message\": \"" + pushBody + "\"}");
+                            if (JiveGlobals.getBooleanProperty("plugin.ofchat.push.always", true))
+                            {
+                                MeetController.getInstance().postWebPush(to, "{\"title\":\"" + pushName + "\", \"url\": \"" + pushUrl + "\", \"message\": \"" + pushBody + "\"}");
+                            }
+                            else {
+                                if (!available)
+                                {
+                                    if (!pushTracker.containsKey(pushUrl))
+                                    {
+                                        MeetController.getInstance().postWebPush(to, "{\"title\":\"" + pushName + "\", \"url\": \"" + pushUrl + "\", \"message\": \"" + pushBody + "\"}");
+                                        pushTracker.put(pushUrl, pushBody);
+                                    }
+                                }
+                                else {  // reset tracker
+                                    pushTracker.remove(pushUrl);
+                                }
+                            }
                         }
 
                         if (fromUser != null && DOMAIN.equals(fromJID.getDomain()) && Message.Type.chat == message.getType())

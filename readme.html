@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<meta charset="utf-8">
-	<title>Chat API Plugin Readme</title>
+    <meta charset="utf-8">
+    <title>Chat API Plugin Readme</title>
     <style type="text/css">
         BODY {
             font-size : 100%;
@@ -41,8 +41,21 @@
 <body><div class="container"><h1 id="rest-api-plugin-readme">Chat API Plugin Readme</h1>
 
 <p>
-	The Chat API Plugin is an extension of the REST API plugin by Roman Soldatow to enable chat and groupchat over a RESTful API and Server Sent Events (SSE) API in addition to the ability to manage Openfire by REST requests and responses. This plugin’s functionality is useful for web applications that provide a complete chat and group chat solution. It should be used with the optional monitoring and bookmarks plugins
+    The Chat API Plugin is an extension of the REST API plugin by Roman Soldatow to enable chat and groupchat over a RESTful API and Server Sent Events (SSE) API in addition to the ability to manage Openfire by REST requests and responses. This plugin’s functionality is useful for web applications that provide a complete chat and group chat solution. It should be used with the optional monitoring and bookmarks plugins
 </p>
+
+<p>This project is using the Maven-based Openfire build process, as introduced in Openfire 4.2.0. To build this plugin locally, ensure that the following are available on your local host:</p>
+<ul>
+<li>A Java Development Kit, version 7 or (preferably) 8</li>
+<li>Apache Maven 3</li>
+</ul>
+<p>To build this project, invoke on a command shell:</p>
+<pre><code>$ mvn clean package
+</code></pre>
+<p>Upon completion, the openfire plugin will be available in <code>target/ofchat-openfire-plugin-assembly.jar</code>. This file should be renamed to <code>ofchat.jar</code></p>
+<h2><a id="user-content-installation" class="anchor" aria-hidden="true" href="#installation"><svg class="octicon octicon-link" viewBox="0 0 16 16" version="1.1" width="16" height="16" aria-hidden="true"><path fill-rule="evenodd" d="M4 9h1v1H4c-1.5 0-3-1.69-3-3.5S2.55 3 4 3h4c1.45 0 3 1.69 3 3.5 0 1.41-.91 2.72-2 3.25V8.59c.58-.45 1-1.27 1-2.09C10 5.22 8.98 4 8 4H4c-.98 0-2 1.22-2 2.5S3 9 4 9zm9-3h-1v1h1c1 0 2 1.22 2 2.5S13.98 12 13 12H9c-.98 0-2-1.22-2-2.5 0-.83.42-1.64 1-2.09V6.25c-1.09.53-2 1.84-2 3.25C6 11.31 7.55 13 9 13h4c1.45 0 3-1.69 3-3.5S14.5 6 13 6z"></path></svg></a>Installation</h2>
+<p>Copy <code>ofchat.jar</code> into the plugins directory of your Openfire server, or use the Openfire Admin Console to upload the plugin. The plugin will then be automatically deployed.</p>
+<p>To upgrade to a new version, copy the new <code>ofchat.jar</code> file over the existing file.</p>
 
 </div></body>
 </html>

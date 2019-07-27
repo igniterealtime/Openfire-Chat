@@ -6,7 +6,24 @@ The [Rest API plugin by Redor](https://igniterealtime.org/projects/openfire/plug
 
 This plugin runs on the HTTP-BIND (7070/7443) port in contrast to the REST API plugin which runs on the admin (9090/9091) port. It authenticates Openfire user credentials. It supports all the admin endpoints from the REST API plugin plus additional admin endpoints for Fastpath Workgroups, Bookmarks and SIP Accounts as an admin user. As a regular user, there are chat endpoints to handle presence, chat, groupchat, meetings, contacts and users and SIP telephone calls. Asynchronous push events are delivered over web server sent events or over a SIP websocket connection.
 
-**Using both plugins at the same time may produce unexpected results**
+# Building
+
+This project is using the Maven-based Openfire build process, as introduced in Openfire 4.2.0. To build this plugin locally, ensure that the following are available on your local host:
+
+* A Java Development Kit, version 7 or (preferably) 8
+* Apache Maven 3
+
+To build this project, invoke on a command shell:
+
+    $ mvn clean package
+
+Upon completion, the openfire plugin will be available in `target/ofchat-openfire-plugin-assembly.jar`. This file should be renamed to `ofchat.jar`
+
+# Installation
+Copy `ofchat.jar` into the plugins directory of your Openfire server, or use the Openfire Admin Console to upload the plugin. The plugin will then be automatically deployed.
+
+To upgrade to a new version, copy the new `ofchat.jar` file over the existing file.
+
 
 # How to use
 The chat api can be used server-side from a web application with an openfire admin username/password on most HTTP requests. This is most useful when there is a middleware proxy web-server between Openfire and the web client like nodejs. This is also required when admin type requsts are made. Otherwise, the web client can use the credentials for the openfire user to perform excluse requests for that user only. For security, avoid exposing the master password/secret to the web client. Use basic HTTP authentication.

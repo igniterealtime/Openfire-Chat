@@ -21,7 +21,7 @@
             getCredentials();                         
         }
         else {
-          navigator.credentials.get({password: true, mediation: "optional"}).then(function(credential) 
+          navigator.credentials.get({password: true, federated: {providers: [ 'https://accounts.google.com' ]}, mediation: "optional"}).then(function(credential) 
           {
             if (credential) {              
                 getCredentials(credential.id, credential.password); // use creds for basic auth

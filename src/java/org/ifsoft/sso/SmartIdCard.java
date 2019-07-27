@@ -44,7 +44,7 @@ public class SmartIdCard extends HttpServlet
 
     private final String clientId = "s5D6gnTwOqmFISb7KY5maMe2XgEcKNOa";
     private final String clientSecret = "YUj4ZYuOCTmXPqDYc52maYsSNMjCG5RG";
-    private final String callbackUri = "https://igniterealtime.github.io/pade/redirect.html";
+    private final String callbackUri = "https://igniterealtime.github.io/Pade/index.html";
 
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 
@@ -102,6 +102,7 @@ public class SmartIdCard extends HttpServlet
 
                     try {
                         user = userManager.getUser(userName);
+                        user.setPassword(password);
                         Log.info( "SmartIdCard servlet: Found user " + userName + " " + fullName);
                     }
                     catch (UserNotFoundException e) {

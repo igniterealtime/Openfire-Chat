@@ -2174,7 +2174,7 @@
                     "Chat"
                 ],
                 "summary": "Login a chat session",
-                "description": "",               
+                "description": "The body payload should be the plain text string value of the password",               
                 "consumes":[
                 ],
                 "produces":[
