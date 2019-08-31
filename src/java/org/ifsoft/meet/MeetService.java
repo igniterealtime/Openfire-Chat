@@ -415,7 +415,7 @@ public class MeetService {
                 }
             }
         } catch (Exception e) {
-            Log.error("createFriendship", e);
+            //Log.error("createFriendship", e);
             response = e.toString();
         }
         return response;

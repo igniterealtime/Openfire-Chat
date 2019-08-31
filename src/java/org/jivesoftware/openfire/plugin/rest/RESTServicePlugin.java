@@ -1109,7 +1109,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             {
                 if (iq.getType() != IQ.Type.result && !processed && incoming)
                 {
-                    Log.info("interceptPacket - register user account " + from);
+                    Log.debug("interceptPacket - register user account " + from);
 
                     if (from != null)
                     {
@@ -1181,13 +1181,13 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
                         User toUser = null;
                         try {toUser = userManager.getUser(to);} catch (Exception e2) {}
 
-                        boolean available = presenceManager.isAvailable(toUser);
-
-                        Log.debug("intercepted message from {} to {}, recipient is available {}\n{}", new Object[]{from, to, available, body});
+                        Log.debug("intercepted message from {} to {}, recipient is available {}\n{}", new Object[]{from, to, body});
 
                         if (toUser != null)
                         {
                             // web push
+
+                            boolean available = presenceManager.isAvailable(toUser);
 
                             String pushUrl = "./index.html#converse/chat?jid=" + fromJID.toBareJID();
                             String pushBody = body;
@@ -1331,7 +1331,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             child.addAttribute("password", password);
 
             try {
-                Log.info("emailIncoming: Creating user " + userJid + " " + name + " " + password + " " + email + "\n" + avatar);
+                Log.debug("emailIncoming: Creating user " + userJid + " " + name + " " + password + " " + email + "\n" + avatar);
 
                 Group group = null;
                 JID jid = new JID(userJid);
@@ -1980,7 +1980,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     public void messageReceived(JID roomJID, JID user, String nickname, Message message)
     {
-        Log.info("MUC messageReceived " + roomJID + " " + user + " " + nickname + "\n" + message.getBody());
+        Log.debug("MUC messageReceived " + roomJID + " " + user + " " + nickname + "\n" + message.getBody());
 
         final String body = message.getBody();
         final String roomJid = roomJID.toString();

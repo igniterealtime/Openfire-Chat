@@ -362,6 +362,7 @@ public class MUCRoomController {
             OccupantEntity occupantEntity = new OccupantEntity();
             occupantEntity.setJid(role.getRoleAddress().toFullJID());
             occupantEntity.setRole(role.getRole().name());
+            occupantEntity.setUserAddress(role.getUserAddress().toFullJID());
             occupantEntity.setAffiliation(role.getAffiliation().name());
 
             occupants.add(occupantEntity);
