@@ -362,7 +362,7 @@ public class Bookmark implements Serializable {
      */
     public void setProperties(List<UserProperty> userProperties)
     {
-        Log.info("setProperties " + userProperties);
+        Log.debug("setProperties " + userProperties);
 
         if (userProperties != null)
         {
@@ -431,7 +431,7 @@ public class Bookmark implements Serializable {
      */
     public void setProperty(String name, String value)
     {
-        Log.info("setProperty " + name + " " + value);
+        Log.debug("setProperty " + name + " " + value);
 
         if (properties == null) {
             loadPropertiesFromDb();
@@ -759,7 +759,7 @@ public class Bookmark implements Serializable {
      * Inserts a new property into the datatabase.
      */
     private void insertPropertyIntoDb(String name, String value) {
-        Log.info("insertPropertyIntoDb " + name + " " + value);
+        Log.debug("insertPropertyIntoDb " + name + " " + value);
 
         Connection con = null;
         PreparedStatement pstmt = null;

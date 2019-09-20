@@ -401,7 +401,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
     @Override
     protected void shutdown() {
-        Log.info("shutdown " + config.getUsername());
+        Log.debug("shutdown " + config.getUsername());
 
         user = null;
         authenticated = false;
@@ -1557,7 +1557,7 @@ public class OpenfireConnection extends AbstractXMPPConnection implements Roster
 
         public void closeVirtualConnection()
         {
-            Log.info("SmackConnection - close ");
+            Log.debug("SmackConnection - close ");
 
             if (this.connection!= null) this.connection.shutdown();
         }

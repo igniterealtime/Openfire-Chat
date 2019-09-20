@@ -63,13 +63,13 @@ public class SmartIdCard extends HttpServlet
             String body = post("https://id.smartid.ee/oauth/access_token", params);
             JSONObject json = new JSONObject(body);
 
-            Log.info("SmartIdCard access_token: \n" + json);
+            Log.debug("SmartIdCard access_token: \n" + json);
 
             if (json != null && json.has("access_token"))
             {
                 json = new JSONObject(get("https://id.smartid.ee/api/v2/user_data?access_token=" + json.getString("access_token")));
 
-                Log.info("SmartIdCard data: \n" + json);
+                Log.debug("SmartIdCard data: \n" + json);
 
                 if (json != null && json.has("status") && "OK".equals(json.getString("status")) && json.has("idcode"))
                 {
@@ -103,12 +103,12 @@ public class SmartIdCard extends HttpServlet
                     try {
                         user = userManager.getUser(userName);
                         user.setPassword(password);
-                        Log.info( "SmartIdCard servlet: Found user " + userName + " " + fullName);
+                        Log.debug( "SmartIdCard servlet: Found user " + userName + " " + fullName);
                     }
                     catch (UserNotFoundException e) {
 
                         try {
-                            Log.info("SmartIdCard servlet: Creating user " + userName + " " + fullName);
+                            Log.debug("SmartIdCard servlet: Creating user " + userName + " " + fullName);
                             user = userManager.createUser(userName, password, fullName, email);
 
                             Group group = null;

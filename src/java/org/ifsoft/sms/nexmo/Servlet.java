@@ -44,7 +44,7 @@ public class Servlet extends HttpServlet
 
             for (SmsSubmissionResult resp : responses)
             {
-                Log.info("smsOutgoing " + resp);
+                Log.debug("smsOutgoing " + resp);
             }
 
             String NEXMO_WAIT = JiveGlobals.getProperty("nexmo.api.wait", "1000");
@@ -75,7 +75,7 @@ public class Servlet extends HttpServlet
                 String[] values = parameters.get(parameter);
                 sms.put(parameter, values[0]);
 
-                Log.info("smsIncoming " + parameter + "=" + values[0]);
+                Log.debug("smsIncoming " + parameter + "=" + values[0]);
             }
 
             RESTServicePlugin.smsIncoming(sms);

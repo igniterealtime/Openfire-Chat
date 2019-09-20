@@ -60,7 +60,7 @@ public class ConversationUtils {
     private static final Logger Log = LoggerFactory.getLogger(ConversationUtils.class);
 
 
-    public ByteArrayOutputStream buildPDFContent(Collection<Conversation> conversations)
+    public ByteArrayOutputStream buildPDFContent(Collection<Conversation> conversations, ArchiveSearch search)
     {
         Font roomEvent = FontFactory.getFont(FontFactory.HELVETICA, 12f, Font.ITALIC, new Color(0xFF, 0x00, 0xFF));
 
@@ -73,10 +73,25 @@ public class ConversationUtils {
 
             for (Conversation conversation : conversations)
             {
-                Map<String, Font> colorMap = getColorMap(conversation);
+                if (JiveGlobals.getBooleanProperty("ofchat.pdf.ignore.room.event", true))
+                {
+                    boolean ignoreThis = true;
 
+                    for (ArchivedMessage message : conversation.getMessages())
+                    {
+                        if (!message.isRoomEvent())
+                        {
+                           ignoreThis = false;
+                        }
+                    }
+
+                    if (ignoreThis) continue;
+                }
+
+                Map<String, Font> colorMap = getColorMap(conversation);
+                String title = search.getRoom() != null ? search.getRoom().getNode() : "";
                 Paragraph p = new Paragraph(
-                    LocaleUtils.getLocalizedString("archive.search.pdf.title", MonitoringConstants.NAME),
+                    LocaleUtils.getLocalizedString("archive.search.pdf.title", MonitoringConstants.NAME) + " " + title,
                     FontFactory.getFont(FontFactory.HELVETICA,
                         18, Font.BOLD));
                 document.add(p);
@@ -130,10 +145,10 @@ public class ConversationUtils {
                 document.add(messageCount);
                 document.add(Chunk.NEWLINE);
 
-                Paragraph messageParagraph;
-
                 for (ArchivedMessage message : conversation.getMessages())
                 {
+                    Paragraph messageParagraph = null;
+
                     String time = JiveGlobals.formatTime(message.getSentDate());
                     String from = message.getFromJID().getNode();
 
@@ -142,6 +157,7 @@ public class ConversationUtils {
                     }
                     String body = message.getBody();
                     String prefix;
+
                     if (!message.isRoomEvent()) {
                         prefix = "[" + time + "] " + from + ":  ";
                         Font font = colorMap.get(message.getFromJID().toString());
@@ -154,13 +170,20 @@ public class ConversationUtils {
                         messageParagraph = new Paragraph(new Chunk(prefix, font));
                     }
                     else {
-                        prefix = "[" + time + "] ";
-                        messageParagraph = new Paragraph(new Chunk(prefix, roomEvent));
-                    }
-                    messageParagraph.add(body);
-                    messageParagraph.add(" ");
 
-                    document.add(messageParagraph);
+                        if (JiveGlobals.getBooleanProperty("ofchat.pdf.ignore.room.event", true) == false)
+                        {
+                            prefix = "[" + time + "] ";
+                            messageParagraph = new Paragraph(new Chunk(prefix, roomEvent));
+                        }
+                    }
+
+                    if (messageParagraph != null)
+                    {
+                        messageParagraph.add(body);
+                        messageParagraph.add(" ");
+                        document.add(messageParagraph);
+                    }
                 }
             }
 

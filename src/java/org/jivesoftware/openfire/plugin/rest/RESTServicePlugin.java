@@ -440,7 +440,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             {
                 public Boolean call() throws Exception
                 {
-                    Log.info("Bootstrap auto-join conferences");
+                    Log.debug("Bootstrap auto-join conferences");
 
                     UserEntities userEntities = UserServiceController.getInstance().getUserEntitiesByProperty("webpush.subscribe.%", null);
                     boolean isBookmarksAvailable = XMPPServer.getInstance().getPluginManager().getPlugin("bookmarks") != null;
@@ -460,7 +460,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
                             if (connection != null)
                             {
-                                Log.info("Auto-login for user " + username + " successfull");
+                                Log.debug("Auto-login for user " + username + " successfull");
                                 connection.autoStarted = true;
 
                                 if (bookmarks != null)
@@ -490,16 +490,16 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
             });
         }
 
-        Log.info("Create recordings folder");
+        Log.debug("Create recordings folder");
         checkRecordingsFolder();
 
         if ( adhocEnabled )
         {
-            Log.info("Create admin session for ad-hoc commands");
+            Log.debug("Create admin session for ad-hoc commands");
             adminConnection = new AdminConnection();
         }
 
-        Log.info("Create SIP cachee");
+        Log.debug("Create SIP cachee");
 
         sipCache = CacheFactory.createLocalCache("SIP Account By Extension");
         sipCache.setMaxCacheSize(-1);
@@ -511,7 +511,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
         if ( smsEnabled || EmailListener.getInstance().isSmtpEnabled())
         {
-            Log.info("Setup SMS/Email message interceptor");
+            Log.debug("Setup SMS/Email message interceptor");
             InterceptorManager.getInstance().addInterceptor(this);
         }
 

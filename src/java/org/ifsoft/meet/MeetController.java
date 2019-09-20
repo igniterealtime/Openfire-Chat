@@ -272,7 +272,7 @@ public class MeetController {
         final String otherCallId = headers.get("Other-Leg-Unique-ID");
         final String callId = headers.get("Caller-Unique-ID");
 
-        Log.info("callStateEvent " + callState + " " + origCallState + " " + destination + " " + source + " " + callId + " " + otherCallId + " " + callDirection);
+        Log.debug("callStateEvent " + callState + " " + origCallState + " " + destination + " " + source + " " + callId + " " + otherCallId + " " + callDirection);
 
         if ("ACTIVE".equals(callState) || "HANGUP".equals(callState) || "RINGING".equals(callState) || "HELD".equals(callState))
         {
@@ -474,7 +474,7 @@ public class MeetController {
 
                             ok =  ok && (200 == statusCode) || (201 == statusCode);
 
-                            Log.info("groupWebPush delivered "  + statusCode + "\n" + response);
+                            Log.debug("groupWebPush delivered "  + statusCode + "\n" + response);
 
                         } catch (Exception e) {
                             Log.error("groupWebPush failed "  + "\n" + payload, e);

@@ -28,121 +28,121 @@ import org.jivesoftware.openfire.plugin.spark.BookmarkManager;
 @Path("restapi/v1/bookmarks")
 public class BookmarkService {
 
-	private static final Logger Log = LoggerFactory.getLogger(BookmarkService.class);
+    private static final Logger Log = LoggerFactory.getLogger(BookmarkService.class);
 
 
-	@PostConstruct
-	public void init()
-	{
+    @PostConstruct
+    public void init()
+    {
 
-	}
+    }
 
-	@POST
-	public Bookmark createBookmark(Bookmark newBookmark) throws ServiceException
-	{
-		Log.info("createBookmark " + newBookmark);
+    @POST
+    public Bookmark createBookmark(Bookmark newBookmark) throws ServiceException
+    {
+        Log.debug("createBookmark " + newBookmark);
 
-		try {
-			return new Bookmark(newBookmark.getType(), newBookmark.getName(), newBookmark.getValue(), newBookmark.getUsers(), newBookmark.getGroups());
+        try {
+            return new Bookmark(newBookmark.getType(), newBookmark.getName(), newBookmark.getValue(), newBookmark.getUsers(), newBookmark.getGroups());
 
-		} catch (Exception e) {
-			throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
-		}
-	}
+        } catch (Exception e) {
+            throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+        }
+    }
 
-	@GET
-	@Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
-	public Bookmarks getBookmarks() throws ServiceException
-	{
-		Log.info("getBookmarks ");
-		try {
-			return new Bookmarks(BookmarkManager.getBookmarks());
+    @GET
+    @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
+    public Bookmarks getBookmarks() throws ServiceException
+    {
+        Log.debug("getBookmarks ");
+        try {
+            return new Bookmarks(BookmarkManager.getBookmarks());
 
-		} catch (Exception e) {
-			throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
-		}
-	}
+        } catch (Exception e) {
+            throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+        }
+    }
 
-	@GET
-	@Path("/{bookmarkID}")
-	@Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
-	public Bookmark getBookmark(@PathParam("bookmarkID") String bookmarkID) throws ServiceException
-	{
-		Log.info("getBookmark " + bookmarkID);
+    @GET
+    @Path("/{bookmarkID}")
+    @Produces({MediaType.APPLICATION_XML, MediaType.APPLICATION_JSON})
+    public Bookmark getBookmark(@PathParam("bookmarkID") String bookmarkID) throws ServiceException
+    {
+        Log.debug("getBookmark " + bookmarkID);
 
-		try {
-			return new Bookmark(Long.parseLong(bookmarkID));
+        try {
+            return new Bookmark(Long.parseLong(bookmarkID));
 
-		} catch (Exception e) {
-			throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
-		}
-	}
+        } catch (Exception e) {
+            throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+        }
+    }
 
-	@DELETE
-	@Path("/{bookmarkID}")
-	public Response deleteBookmark(@PathParam("bookmarkID") String bookmarkID) throws ServiceException
-	{
-		Log.info("deleteBookmark " + bookmarkID);
+    @DELETE
+    @Path("/{bookmarkID}")
+    public Response deleteBookmark(@PathParam("bookmarkID") String bookmarkID) throws ServiceException
+    {
+        Log.debug("deleteBookmark " + bookmarkID);
 
-		try {
-			BookmarkManager.deleteBookmark(Long.parseLong(bookmarkID));
+        try {
+            BookmarkManager.deleteBookmark(Long.parseLong(bookmarkID));
 
-		} catch (Exception e) {
-			throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
-		}
+        } catch (Exception e) {
+            throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+        }
 
-		return Response.status(Response.Status.OK).build();
-	}
+        return Response.status(Response.Status.OK).build();
+    }
 
-	@PUT
-	@Path("/{bookmarkID}")
-	public Bookmark updateBookmark(@PathParam("bookmarkID") String bookmarkID, Bookmark newBookmark) throws ServiceException
-	{
-		Log.info("updateBookmark " + bookmarkID + " " + newBookmark.getType() + " " + newBookmark.getName() + " " + newBookmark.getValue() + " " + newBookmark.getUsers() + " " + newBookmark.getGroups() + " " + newBookmark.getProperties());
+    @PUT
+    @Path("/{bookmarkID}")
+    public Bookmark updateBookmark(@PathParam("bookmarkID") String bookmarkID, Bookmark newBookmark) throws ServiceException
+    {
+        Log.debug("updateBookmark " + bookmarkID + " " + newBookmark.getType() + " " + newBookmark.getName() + " " + newBookmark.getValue() + " " + newBookmark.getUsers() + " " + newBookmark.getGroups() + " " + newBookmark.getProperties());
 
-		try {
-			Bookmark bookmark = BookmarkManager.getBookmark(Long.parseLong(bookmarkID));
-			bookmark.setType(newBookmark.getType());
-			bookmark.setName(newBookmark.getName());
-			bookmark.setValue(newBookmark.getValue());
-			bookmark.setUsers(newBookmark.getUsers());
-			bookmark.setGroups(newBookmark.getGroups());
-			return bookmark;
+        try {
+            Bookmark bookmark = BookmarkManager.getBookmark(Long.parseLong(bookmarkID));
+            bookmark.setType(newBookmark.getType());
+            bookmark.setName(newBookmark.getName());
+            bookmark.setValue(newBookmark.getValue());
+            bookmark.setUsers(newBookmark.getUsers());
+            bookmark.setGroups(newBookmark.getGroups());
+            return bookmark;
 
-		} catch (Exception e) {
-			throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
-		}
-	}
+        } catch (Exception e) {
+            throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+        }
+    }
 
-	@PUT
-	@Path("/{bookmarkID}/property")
-	public Bookmark updateBookmarkProperty(@PathParam("bookmarkID") String bookmarkID, @QueryParam("name") String name, @QueryParam("value") String value) throws ServiceException
-	{
-		Log.info("updateBookmarkProperty " + bookmarkID + " " + name + " " + value);
+    @PUT
+    @Path("/{bookmarkID}/property")
+    public Bookmark updateBookmarkProperty(@PathParam("bookmarkID") String bookmarkID, @QueryParam("name") String name, @QueryParam("value") String value) throws ServiceException
+    {
+        Log.debug("updateBookmarkProperty " + bookmarkID + " " + name + " " + value);
 
-		try {
-			Bookmark bookmark = BookmarkManager.getBookmark(Long.parseLong(bookmarkID));
-			bookmark.setProperty(name, value);
-			return bookmark;
+        try {
+            Bookmark bookmark = BookmarkManager.getBookmark(Long.parseLong(bookmarkID));
+            bookmark.setProperty(name, value);
+            return bookmark;
 
-		} catch (Exception e) {
-			throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
-		}
-	}
+        } catch (Exception e) {
+            throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+        }
+    }
 
-	@DELETE
-	@Path("/{bookmarkID}/property")
-	public Bookmark deleteBookmarkProperty(@PathParam("bookmarkID") String bookmarkID, @QueryParam("name") String name) throws ServiceException
-	{
-		Log.info("deleteBookmarkProperty " + bookmarkID + " " + name);
+    @DELETE
+    @Path("/{bookmarkID}/property")
+    public Bookmark deleteBookmarkProperty(@PathParam("bookmarkID") String bookmarkID, @QueryParam("name") String name) throws ServiceException
+    {
+        Log.debug("deleteBookmarkProperty " + bookmarkID + " " + name);
 
-		try {
-			Bookmark bookmark = BookmarkManager.getBookmark(Long.parseLong(bookmarkID));
-			bookmark.deleteProperty(name);
-			return bookmark;
+        try {
+            Bookmark bookmark = BookmarkManager.getBookmark(Long.parseLong(bookmarkID));
+            bookmark.deleteProperty(name);
+            return bookmark;
 
-		} catch (Exception e) {
-			throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
-		}
-	}
+        } catch (Exception e) {
+            throw new ServiceException("Exception", e.getMessage(), ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+        }
+    }
 }

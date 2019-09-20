@@ -160,7 +160,7 @@ public class EmailListener {
 
         if (isSmtpEnabled())
         {
-            Log.info("SMTP Listener started");
+            Log.debug("SMTP Listener started");
 
             try {
                 final InetAddress bindingAddress = InetAddress.getByName(JiveGlobals.getProperty("xmpp.socket.plain.interface", XMPPServer.getInstance().getServerInfo().getHostname()));
@@ -258,7 +258,7 @@ public class EmailListener {
         String subject = message.getSubject();
         List<String> userCollection = new ArrayList<String>();
 
-        Log.info("New email has been received " + subject);
+        Log.debug("New email has been received " + subject);
 
         if (subject.startsWith("Openfire Meetings: ")) return;      // email listener is a participant, ignore email
 
@@ -311,13 +311,13 @@ public class EmailListener {
 
             if (bookmark != null)   // user replies email listener, if user is online, send URL direct to ofmeet web client
             {
-                Log.info("Found existing bookmark for " + bookmark.getProperty("url"));
+                Log.debug("Found existing bookmark for " + bookmark.getProperty("url"));
 
                 Collection<ClientSession> sessions = SessionManager.getInstance().getSessions(fromUser.getUsername());
 
                 for (ClientSession session : sessions)
                 {
-                    Log.info("Found existing session, redirecting to " + bookmark.getProperty("url"));
+                    Log.debug("Found existing session, redirecting to " + bookmark.getProperty("url"));
                     sendMessage(session.getAddress(), session.getAddress(), bookmark.getProperty("url"));
                 }
                 return;
@@ -332,7 +332,7 @@ public class EmailListener {
             if (bookmark != null && meeting.cancel)
             {
                 bookmark.setProperty("calendar", "[]");
-                Log.info("Removing event for meeting planner \n" + meeting.body);
+                Log.debug("Removing event for meeting planner \n" + meeting.body);
             }
             return;
         }
@@ -382,7 +382,7 @@ public class EmailListener {
                     {
                         String json = "[{\"processed\": false, \"id\": \"" + System.currentTimeMillis() + "\", \"start\": " + meeting.startDate.getTime() + ", \"end\": " + meeting.endDate.getTime() + ", \"startTime\": \"" + endDate + "\", \"endTime\": \"" + endDate + "\", \"title\": \"" + subject + "\", \"description\": \"" + meeting.body + "\", \"room\": \"" + roomId + "\"}]";
                         bookmark.setProperty("calendar", json);
-                        Log.info("Adding event for meeting planner \n" + meeting.body);
+                        Log.debug("Adding event for meeting planner \n" + meeting.body);
                     }
 
                 } catch (Exception e) {
@@ -393,7 +393,7 @@ public class EmailListener {
                 meeting.startDate = new java.util.Date(System.currentTimeMillis());
                 meeting.endDate = new java.util.Date(System.currentTimeMillis() + 3600000);
 
-                Log.info("Immediate meeting, no event meeting planner\n" + meeting.body);
+                Log.debug("Immediate meeting, no event meeting planner\n" + meeting.body);
             }
 
             bookmark.setUsers(userCollection);
@@ -421,7 +421,7 @@ public class EmailListener {
 
     private void sendMessage(JID from, JID to, String body)
     {
-        Log.info("sendMessage: " + from + " " + to + " " + body);
+        Log.debug("sendMessage: " + from + " " + to + " " + body);
 
         org.xmpp.packet.Message message = new org.xmpp.packet.Message();
         message.setTo(to);
@@ -445,13 +445,13 @@ public class EmailListener {
         {
             from = from.substring(ltIndex+1, gtIndex);
 
-            Log.info("getUserFromEmailAddress: found email address " + from);
+            Log.debug("getUserFromEmailAddress: found email address " + from);
 
             Collection<User> users = userManager.findUsers(new HashSet<String>(Arrays.asList("Email")), from);
 
             for (User user : users)
             {
-                Log.info("getUserFromEmailAddress: matched email address " + from + " " + user.getUsername());
+                Log.debug("getUserFromEmailAddress: matched email address " + from + " " + user.getUsername());
 
                 theUser = user;
             }
@@ -503,13 +503,13 @@ public class EmailListener {
             meeting.body = (String) part.getContent();
             meeting.body = meeting.body.replace("\n", " ").replace("\r", "").replace("\t", "").replace("\"", "'");
 
-            Log.info("Found body \n" + meeting.body);
+            Log.debug("Found body \n" + meeting.body);
         }
         else if (part.isMimeType("multipart/*")) {
-            Log.info("Found embedded multipart");
+            Log.debug("Found embedded multipart");
         }
         else if (part.isMimeType("message/rfc822")) {
-            Log.info("Found nested email");
+            Log.debug("Found nested email");
         }
         else {
 
@@ -519,7 +519,7 @@ public class EmailListener {
 
             if (fileName != null && fileName.endsWith(".pdf") && o instanceof InputStream)
             {
-                Log.info("Found PDF " + fileName);
+                Log.debug("Found PDF " + fileName);
 
                 OutputStream output = new FileOutputStream(downloadHome + File.separator + fileName);
 
@@ -562,7 +562,7 @@ public class EmailListener {
                         meeting.request = contentType.indexOf("method=REQUEST") > -1;
                         meeting.cancel = contentType.indexOf("method=CANCEL") > -1;
 
-                        Log.info("Found Calendar data request=" + meeting.request + ", cancel=" + meeting.cancel);
+                        Log.debug("Found Calendar data request=" + meeting.request + ", cancel=" + meeting.cancel);
 
                         try {
                             BASE64DecoderStream is = (BASE64DecoderStream) o;
@@ -579,7 +579,7 @@ public class EmailListener {
                                 meeting.endDate = getDate(dateFormat, lines, "DTEND;TZID=");
                             }
 
-                            Log.info("Found Calendar start=" + meeting.startDate.getTime() + ", end=" + meeting.endDate.getTime());
+                            Log.debug("Found Calendar start=" + meeting.startDate.getTime() + ", end=" + meeting.endDate.getTime());
 
                         } catch (Exception e) {
                             Log.error("Error decoding start or end date", e);
@@ -587,9 +587,9 @@ public class EmailListener {
                     }
 
                 } else {
-                    Log.info("Found PDF " + fileName);
-                    Log.info("Found unknown attachment " + part.getFileName() + " " + part.getContentType());
-                    Log.info(part.getContent().toString());
+                    Log.debug("Found PDF " + fileName);
+                    Log.debug("Found unknown attachment " + part.getFileName() + " " + part.getContentType());
+                    Log.debug(part.getContent().toString());
                 }
             }
         }
@@ -890,7 +890,7 @@ public class EmailListener {
 
     private void configureRoom(MUCRoom room, String title, String owner)
     {
-        Log.info( "configureRoom " + room.getID());
+        Log.debug( "configureRoom " + room.getID());
 
         FormField field;
         XDataFormImpl dataForm = new XDataFormImpl(DataForm.TYPE_SUBMIT);
@@ -1001,7 +1001,7 @@ public class EmailListener {
 
     private void sendWorkgroupEmail(String email, String workgroupNodeName, String template, String room)
     {
-        Log.info("sendWorkgroupEmail " + workgroupNodeName + " " + email + " " + room + "\n" + template);
+        Log.debug("sendWorkgroupEmail " + workgroupNodeName + " " + email + " " + room + "\n" + template);
 
         String videourl = "https://" + XMPPServer.getInstance().getServerInfo().getHostname() + ":" + JiveGlobals.getProperty("httpbind.port.secure", "7443") + "/ofmeet/" + room;
         String audiourl = videourl + "#config.startWithVideoMuted=true";
@@ -1018,7 +1018,7 @@ public class EmailListener {
 
     private void processWorkgroupRequest(String workgroupNodeName, Message message, User fromUser)
     {
-        Log.info("processWorkgroupRequest " + workgroupNodeName);
+        Log.debug("processWorkgroupRequest " + workgroupNodeName);
 
         String template = JiveGlobals.getProperty("ofmeet.email.workgroup.unavailable.template", "Hello,\n\nWorkgroup [workgroup] is not taking requests at this moment.\nPlease try later\n\nAdministrator - [domain]");
 
@@ -1044,7 +1044,7 @@ public class EmailListener {
 
             if (userid != null)
             {
-                Log.info("processWorkgroupRequest userid " + userid);
+                Log.debug("processWorkgroupRequest userid " + userid);
 
                 String messageBody = null;
 
@@ -1072,7 +1072,7 @@ public class EmailListener {
 
                 if (messageBody != null)
                 {
-                    Log.info("processWorkgroupRequest body " + messageBody);
+                    Log.debug("processWorkgroupRequest body " + messageBody);
 
                     messageBody = messageBody.replace("\n", " ").replace("\r", "").replace("\t", "").replace("\"", "'");
 
@@ -1080,7 +1080,7 @@ public class EmailListener {
 
                     if (globalConnections.containsKey(userid) == false)
                     {
-                        Log.info("processWorkgroupRequest smack session " + workgroupName);
+                        Log.debug("processWorkgroupRequest smack session " + workgroupName);
 
                         XMPPTCPConnectionConfiguration config = XMPPTCPConnectionConfiguration.builder()
                         .setUsernameAndPassword(userid, null)
@@ -1204,7 +1204,7 @@ public class EmailListener {
 
     public void processMeeting(JSONObject meeting, String username, String videourl)
     {
-        Log.info("OfMeet Plugin - processMeeting " + username + " " + meeting);
+        Log.debug("OfMeet Plugin - processMeeting " + username + " " + meeting);
 
         try {
             UserManager userManager = XMPPServer.getInstance().getUserManager();
@@ -1287,7 +1287,7 @@ public class EmailListener {
 
         @Override public boolean accept(String from, String recipient)
         {
-            Log.info("Accepting new email from " + from + " to " + recipient);
+            Log.debug("Accepting new email from " + from + " to " + recipient);
             return org.jivesoftware.openfire.plugin.rest.RESTServicePlugin.emailAccept(from, recipient);
         }
 
@@ -1297,7 +1297,7 @@ public class EmailListener {
 
             try {
                 MimeMessage mimeMessage = new MimeMessage(session, data);
-                Log.info("Got message  body from " + from + " for " + recipient + " " + mimeMessage.getSubject() + " " + getTextFromMessage(mimeMessage));
+                Log.debug("Got message  body from " + from + " for " + recipient + " " + mimeMessage.getSubject() + " " + getTextFromMessage(mimeMessage));
                 org.jivesoftware.openfire.plugin.rest.RESTServicePlugin.emailIncoming(from, recipient, getTextFromMessage(mimeMessage));
 
             } catch (Exception e) {
@@ -1354,7 +1354,7 @@ public class EmailListener {
 
                 if (fileName != null && o instanceof InputStream)
                 {
-                    Log.info("Found attachment " + fileName);
+                    Log.debug("Found attachment " + fileName);
 
                     OutputStream output = new FileOutputStream(downloadHome + File.separator + fileName);
 

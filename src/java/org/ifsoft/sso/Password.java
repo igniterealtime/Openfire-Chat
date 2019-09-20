@@ -39,7 +39,7 @@ public class Password extends HttpServlet
             String hostname = XMPPServer.getInstance().getServerInfo().getHostname();
             String domain = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
 
-            Log.info("Password Servlet: " + sessionName + " " + windowsName);
+            Log.debug("Password Servlet: " + sessionName + " " + windowsName);
 
             if (windowsName != null && sessionName != null && sessionName.equals(windowsName))
             {
@@ -63,12 +63,12 @@ public class Password extends HttpServlet
 
                     try {
                         user = userManager.getUser(userName);
-                        Log.info( "Password servlet: Found user " + userName);
+                        Log.debug( "Password servlet: Found user " + userName);
                     }
                     catch (UserNotFoundException e) {
 
                         try {
-                            Log.info("Password servlet: Creating user " + userName);
+                            Log.debug("Password servlet: Creating user " + userName);
                             user = userManager.createUser(userName, password, null, null);
 
                             Group group = null;

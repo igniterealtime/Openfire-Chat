@@ -18,6 +18,7 @@ package org.jivesoftware.openfire.archive;
 import java.util.*;
 import java.text.*;
 import java.io.*;
+import java.time.*;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -90,10 +91,19 @@ public class ConversationPDFServlet extends HttpServlet {
 
         if (start != null)
         {
-            DateFormat formatter = new SimpleDateFormat("MM/dd/yy");
+            Date startDate = null;
+
             try {
-                Date date = formatter.parse(start);
-                search.setDateRangeMin(date);
+                if (start.contains("T"))
+                {
+                    startDate = Date.from(Instant.parse(start));
+                }
+                else {
+                    DateFormat formatter = new SimpleDateFormat("MM/dd/yy");
+                    startDate = formatter.parse(start);
+                }
+                startDate = new Date(startDate.getTime() - JiveConstants.MINUTE * 5);
+                search.setDateRangeMin(startDate);
             }
             catch (Exception e) {
                 Log.error("ConversationPDFServlet", e);
@@ -102,11 +112,19 @@ public class ConversationPDFServlet extends HttpServlet {
 
         if (end != null)
         {
-            DateFormat formatter = new SimpleDateFormat("MM/dd/yy");
+            Date endDate = null;
+
             try {
-                Date date = formatter.parse(end);
-                date = new Date(date.getTime() + JiveConstants.DAY - 1);
-                search.setDateRangeMax(date);
+                if (end.contains("T"))
+                {
+                    endDate = Date.from(Instant.parse(end));
+                }
+                else {
+                    DateFormat formatter = new SimpleDateFormat("MM/dd/yy");
+                    endDate = formatter.parse(end);
+                }
+                endDate = new Date(endDate.getTime() + JiveConstants.DAY - 1);
+                search.setDateRangeMax(endDate);
             }
             catch (Exception e) {
                 Log.error("ConversationPDFServlet", e);
@@ -123,14 +141,14 @@ public class ConversationPDFServlet extends HttpServlet {
 
         search.setSortOrder(ArchiveSearch.SortOrder.ascending);
 
-        Log.info("ConversationPDFServlet " + search.getParticipants() + " " + search.getQueryString());
+        Log.debug("ConversationPDFServlet " + search.getParticipants() + " " + search.getQueryString());
 
         Collection<Conversation> conversations = new ArchiveSearcher().search(search);
 
         if (conversations.size() > 0)
         {
             try {
-                ByteArrayOutputStream stream = new ConversationUtils().buildPDFContent(conversations);
+                ByteArrayOutputStream stream = new ConversationUtils().buildPDFContent(conversations, search);
 
                 stream.writeTo(out);
                 out.flush();

@@ -31,7 +31,7 @@ public class Servlet extends HttpServlet
     public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 
         try {
-            Log.info("download - servlet - doGet start");
+            Log.debug("download - servlet - doGet start");
 
             String url = request.getParameter("url");
 
@@ -42,7 +42,7 @@ public class Servlet extends HttpServlet
 
         }
         catch(Exception e) {
-            Log.info("download - servlet doGet Error: " + e.toString());
+            Log.debug("download - servlet doGet Error: " + e.toString());
         }
     }
 
@@ -73,7 +73,7 @@ public class Servlet extends HttpServlet
         }
         catch(Exception e)
         {
-            Log.info("download - servlet writeHeader Error: " + e.toString());
+            Log.debug("download - servlet writeHeader Error: " + e.toString());
         }
     }
 
@@ -96,13 +96,13 @@ public class Servlet extends HttpServlet
             out.close();
 
         } catch(MalformedURLException e){
-            Log.info("download - servlet writeGet MalformedURLException", e);
+            Log.debug("download - servlet writeGet MalformedURLException", e);
 
         } catch(IOException  e1){
-            Log.info("download - servlet writeGet IOException", e1);
+            Log.debug("download - servlet writeGet IOException", e1);
 
         } catch (Exception e2) {
-            Log.info("download - servlet - writeGet Exception", e2);
+            Log.debug("download - servlet - writeGet Exception", e2);
         }
     }
 }

@@ -98,7 +98,7 @@ public class ArchiveSearcher implements Startable {
      */
     public Collection<Conversation> search(ArchiveSearch search)
     {
-        Log.info("ArchiveSearcher search " + search.getQueryString());
+        Log.debug("ArchiveSearcher search " + search.getQueryString());
 
         // If the search has a query string it will be driven by Lucene. Otherwise
         if (search.getQueryString() != null) {
@@ -117,7 +117,7 @@ public class ArchiveSearcher implements Startable {
      */
     private Collection<Conversation> luceneSearch(ArchiveSearch search)
     {
-        Log.info("luceneSearch search " + search.getQueryString());
+        Log.debug("luceneSearch search " + search.getQueryString());
 
         try {
 
@@ -263,7 +263,7 @@ public class ArchiveSearcher implements Startable {
      */
     private Collection<Conversation> databaseSearch(ArchiveSearch search)
     {
-        Log.info("databaseSearch search " + search.getParticipants());
+        Log.debug("databaseSearch search " + search.getParticipants());
 
         CachedPreparedStatement cachedPstmt = new CachedPreparedStatement();
 

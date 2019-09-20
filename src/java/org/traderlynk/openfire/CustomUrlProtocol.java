@@ -42,38 +42,38 @@ import org.jivesoftware.util.*;
 public class CustomUrlProtocol  extends HttpServlet
 {
     private static final Logger Log = LoggerFactory.getLogger(CustomUrlProtocol.class);
-	public static final long serialVersionUID = 24362462L;
+    public static final long serialVersionUID = 24362462L;
 
-	public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
 
-		try {
-			String url = request.getParameter("url");
-			Log.info("CustomUrlProtocol - doGet rest " + url);
-			response.setStatus(204);
+        try {
+            String url = request.getParameter("url");
+            Log.debug("CustomUrlProtocol - doGet rest " + url);
+            response.setStatus(204);
 
-			String verb = null;
+            String verb = null;
 
-			if (url.contains("web el:put/") || url.contains("web+el:put/")) verb = "PUT";
-			if (url.contains("web el:post/") || url.contains("web+el:post/")) verb = "POST";
-			if (url.contains("web el:delete/") || url.contains("web+el:delete/")) verb = "DELETE";
+            if (url.contains("web el:put/") || url.contains("web+el:put/")) verb = "PUT";
+            if (url.contains("web el:post/") || url.contains("web+el:post/")) verb = "POST";
+            if (url.contains("web el:delete/") || url.contains("web+el:delete/")) verb = "DELETE";
 
-			if (verb != null)
-			{
-				String newUrl = "/rest/api/restapi/v1/" + url.substring(7 + verb.length() + 1);
+            if (verb != null)
+            {
+                String newUrl = "/rest/api/restapi/v1/" + url.substring(7 + verb.length() + 1);
 
-				String token = request.getHeader("authorization");
-				doRest(newUrl, verb, token);
-			}
-		}
-		catch(Exception e) {
-			Log.info("CustomUrlProtocol doGet Error: " + e.toString());
-		}
-	}
+                String token = request.getHeader("authorization");
+                doRest(newUrl, verb, token);
+            }
+        }
+        catch(Exception e) {
+            Log.debug("CustomUrlProtocol doGet Error: " + e.toString());
+        }
+    }
 
 
    private void doRest(String urlToSend, String verb, String token)
    {
-	  Log.info("CustomUrlProtocol - doRest " + urlToSend);
+      Log.debug("CustomUrlProtocol - doRest " + urlToSend);
 
       URL url;
       HttpURLConnection conn;
@@ -83,12 +83,12 @@ public class CustomUrlProtocol  extends HttpServlet
          conn = (HttpURLConnection) url.openConnection();
          conn.setReadTimeout(60 * 1000);
          conn.setConnectTimeout(60 * 1000);
-		 if (token != null) conn.setRequestProperty ("Authorization", token);
+         if (token != null) conn.setRequestProperty ("Authorization", token);
          conn.setRequestMethod(verb);
-		 conn.getResponseCode();
+         conn.getResponseCode();
 
       } catch (Exception e) {
          Log.error("doRest", e);
       }
-	}
+    }
 }

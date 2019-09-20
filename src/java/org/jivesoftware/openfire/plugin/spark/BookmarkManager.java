@@ -145,7 +145,7 @@ public class BookmarkManager {
      */
     public static void broadcastMessage(String roomJID, String userJID, String nickname, String body, Bookmark bookmark)
     {
-        Log.info("broadcastMessage " + roomJID + " " + userJID + " " + nickname + "\n" + body);
+        Log.debug("broadcastMessage " + roomJID + " " + userJID + " " + nickname + "\n" + body);
 
         Message message = new Message();
         message.setFrom(roomJID);

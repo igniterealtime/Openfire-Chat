@@ -33,6 +33,8 @@ import org.jivesoftware.openfire.auth.AuthFactory;
 import org.jivesoftware.openfire.*;
 
 import org.jivesoftware.util.*;
+import org.jivesoftware.util.cache.Cache;
+import org.jivesoftware.util.cache.CacheFactory;
 import org.jivesoftware.openfire.user.*;
 import org.jivesoftware.database.DbConnectionManager;
 
@@ -68,12 +70,17 @@ public class AskService {
 
     private static final Logger Log = LoggerFactory.getLogger(AskService.class);
     private static final String TEXT_PLAIN = "text/plain";
+    private static final String APPLICATION_JSON = "application/json";
+    private static final Header HEADER_ACCEPT_APPLICATION_JSON = new Header("Accept", APPLICATION_JSON);
+    private static final Header HEADER_CONTENT_TYPE_APPLICATION_JSON = new Header("Content-Type", APPLICATION_JSON);
+    private static final Header HEADER_ACCEPT_CHARSET_UTF8 = new Header("Accept-Charset", "UTF-8");
     private static final MessageRouter MESSAGE_ROUTER = XMPPServer.getInstance().getMessageRouter();
     private static final String DOMAIN = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
-    private static final ConcurrentHashMap<String, String> cachedJwts;
+    private static final String SERVER = XMPPServer.getInstance().getServerInfo().getHostname();
+    private static final Cache<String, String> cachedIrmaRequests;
 
     static {
-       cachedJwts = new ConcurrentHashMap<String, String>();
+       cachedIrmaRequests = CacheFactory.createLocalCache("IRMA Verifications");
     }
     private HttpClient client;
 
@@ -330,7 +337,7 @@ public class AskService {
         try {
             String signer = JiveGlobals.getProperty("uport.clientid." + appId + "." + clientId);
 
-            Log.info("gotSigner " + signer);
+            Log.debug("gotSigner " + signer);
 
             if (signer == null || signer.equals(""))
             {
@@ -447,16 +454,16 @@ public class AskService {
 
     @POST
     @Path("/irma/reveal/{jid}")
-    public String irmaReveal(@PathParam("jid") String jid, String jwt) throws ServiceException
+    public String irmaReveal(@PathParam("jid") String jid, String irmaRequest) throws ServiceException
     {
-        Log.info("irmaReveal " + jid + " " + jwt + "\n" + cachedJwts.values() + "\n" + cachedJwts.keySet());
+        Log.debug("irmaReveal " + jid + " " + irmaRequest + "\n" + cachedIrmaRequests.values() + "\n" + cachedIrmaRequests.keySet());
 
         String response = "\"ERROR\"";
 
-        if (cachedJwts.containsKey(jid))
+        if (cachedIrmaRequests.containsKey(jid))
         {
            Log.debug("irmaReveal cached " + jid);
-           response = cachedJwts.get(jid);
+           response = cachedIrmaRequests.get(jid);
            int tries = 0;
 
            while (response.contains("PENDING") && tries < 20)
@@ -469,16 +476,16 @@ public class AskService {
                     Log.error("irmaReveal thread sleep execption", e);
                 }
 
-                response = cachedJwts.get(jid);
+                response = cachedIrmaRequests.get(jid);
                 tries++;
            }
 
-           if (tries >= 10) cachedJwts.remove(jid);
+           if (tries >= 10 || response.contains("ERROR")) cachedIrmaRequests.remove(jid);
         }
         else {
-            cachedJwts.put(jid, "\"PENDING\"");
+            cachedIrmaRequests.put(jid, "\"PENDING\"");
 
-            String revealUrl = "https://demo.irmacard.org/tomcat/irma_api_server/api/v2/verification/";
+            String revealUrl = JiveGlobals.getProperty("irma.external.url", "http://" + SERVER + ":" + JiveGlobals.getProperty("httpbind.port.plain", "7070")) +  "/session";
             PostMethod post = null;
             GetMethod get = null;
 
@@ -486,22 +493,26 @@ public class AskService {
 
             try {
                 post = new PostMethod(revealUrl);
+                post.addRequestHeader(HEADER_ACCEPT_APPLICATION_JSON);
+                post.addRequestHeader(HEADER_CONTENT_TYPE_APPLICATION_JSON);
+                post.addRequestHeader(HEADER_ACCEPT_CHARSET_UTF8);
 
-                if (jwt != null)
+                if (irmaRequest != null)
                 {
-                    post.setRequestEntity(new StringRequestEntity(jwt, TEXT_PLAIN, "UTF-8"));
+                    post.setRequestEntity(new StringRequestEntity(irmaRequest, TEXT_PLAIN, "UTF-8"));
                     int httpCode = client.executeMethod(post);
 
                     if (httpCode < 300)
                     {
-                        response = getStringFromResponse(post);
-                        routeMessage(jid, response, "reveal");
-                        JSONObject json = new JSONObject(response);
+                        String payload = getStringFromResponse(post);
+                        JSONObject json = new JSONObject(payload);
 
-                        if (json.has("u"))
+                        if (json.has("sessionPtr") && json.has("token"))
                         {
-                            String sessionId = json.getString("u");
-                            String checkUrl = revealUrl + sessionId + "/status";
+                            routeMessage(jid, payload, "reveal");
+
+                            String sessionId = json.getString("token");
+                            String checkUrl = revealUrl + "/" + sessionId + "/status";
 
                             Log.debug("irmaReveal session id " + sessionId);
 
@@ -510,6 +521,10 @@ public class AskService {
                                 Thread.sleep(3000);
 
                                 get = new GetMethod(checkUrl + "?" + System.currentTimeMillis());
+                                get.addRequestHeader(HEADER_ACCEPT_APPLICATION_JSON);
+                                get.addRequestHeader(HEADER_CONTENT_TYPE_APPLICATION_JSON);
+                                get.addRequestHeader(HEADER_ACCEPT_CHARSET_UTF8);
+
                                 httpCode = client.executeMethod(get);
 
                                 response = "\"ERROR\"";
@@ -523,14 +538,14 @@ public class AskService {
                             {
                                 Log.debug("irmaReveal done " + sessionId);
 
-                                String proofUrl = revealUrl + sessionId + "/getproof";
-                                get = new GetMethod(proofUrl);
+                                String resultUrl = revealUrl + "/" + sessionId + "/result";
+                                get = new GetMethod(resultUrl);
                                 httpCode = client.executeMethod(get);
 
                                 if (httpCode < 300)
                                 {
                                     response = getStringFromResponse(get);
-                                    cachedJwts.put(jid, response);
+                                    cachedIrmaRequests.put(jid, response);
 
                                     Log.debug("irmaReveal payload \n" + response);
                                 }
@@ -540,6 +555,10 @@ public class AskService {
                                 Log.debug("irmaReveal error " + response + " " + httpCode);
                                 routeMessage(jid, response, "error");
                             }
+                        }
+                        else {
+                            Log.debug("irmaReveal error " + response + " " + httpCode);
+                            routeMessage(jid, response, "error");
                         }
                     }
                     else {

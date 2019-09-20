@@ -60,7 +60,7 @@ private static final Logger Log = LoggerFactory.getLogger(MessageBlastService.cl
     public static void start()
     {
         try {
-            Log.info("MessageBlastService: initialise scheduler");
+            Log.debug("MessageBlastService: initialise scheduler");
 
             scheduler = StdSchedulerFactory.getDefaultScheduler();
             scheduler.start();
@@ -91,7 +91,7 @@ private static final Logger Log = LoggerFactory.getLogger(MessageBlastService.cl
 
     public static void stop()
     {
-        Log.info("MessageBlastService: destroy scheduler");
+        Log.debug("MessageBlastService: destroy scheduler");
 
         try {
             scheduler.shutdown();

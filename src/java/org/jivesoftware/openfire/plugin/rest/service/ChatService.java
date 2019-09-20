@@ -6,6 +6,7 @@ import java.text.*;
 import java.net.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
+import java.time.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.annotation.PostConstruct;
@@ -134,11 +135,11 @@ public class ChatService {
                         {
                             String command1 = openSslPath + " req -new -newkey rsa:4096 -days 365 -nodes -x509 -keyout " + usernameAndPassword[0] + ".key -out " + usernameAndPassword[0] + ".crt -config " + usernameAndPassword[0] + ".cnf -extensions v3_extensions -subj \"/CN=" + jid + "\"";
                             String out1 = Spawn.runCommand(command1, new File(aliasHome));
-                            Log.info(command1 + "\n" + out1);
+                            Log.debug(command1 + "\n" + out1);
 
                             String command2 = openSslPath + " pkcs12 -export -inkey " + usernameAndPassword[0] + ".key -in " + usernameAndPassword[0] + ".crt -out " + usernameAndPassword[0] + ".pfx -passout pass:" + usernameAndPassword[1] + " -passin pass:" + usernameAndPassword[1];
                             String out2 = Spawn.runCommand(command2, new File(aliasHome));
-                            Log.info(command2 + "\n" + out2);
+                            Log.debug(command2 + "\n" + out2);
                         }
                     }
 
@@ -477,34 +478,43 @@ public class ChatService {
 
             if (start != null)
             {
-                DateFormat formatter = new SimpleDateFormat("MM/dd/yy");
+                Date startDate = null;
+
                 try {
-                    Date date = formatter.parse(start);
-                    search.setDateRangeMin(date);
+                    if (start.contains("T"))
+                    {
+                        startDate = Date.from(Instant.parse(start));
+                    }
+                    else {
+                        DateFormat formatter = new SimpleDateFormat("MM/dd/yy");
+                        startDate = formatter.parse(start);
+                    }
+                    startDate = new Date(startDate.getTime() - JiveConstants.MINUTE * 5);
+                    search.setDateRangeMin(startDate);
                 }
                 catch (Exception e) {
-                    Log.error("getConversations", e);
-                    throw new ServiceException("Exception", "Bad start date", ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+                    Log.error("ConversationPDFServlet", e);
                 }
             }
 
             if (end != null)
             {
-                DateFormat formatter = new SimpleDateFormat("MM/dd/yy");
+                Date endDate = null;
+
                 try {
-                    Date date = formatter.parse(end);
-                    // The user has chosen an end date and expects that any conversation
-                    // that falls on that day will be included in the search results. For
-                    // example, say the user choose 6/17/2006 as an end date. If a conversation
-                    // occurs at 5:33 PM that day, it should be included in the results. In
-                    // order to make this possible, we need to make the end date one millisecond
-                    // before the next day starts.
-                    date = new Date(date.getTime() + JiveConstants.DAY - 1);
-                    search.setDateRangeMax(date);
+                    if (end.contains("T"))
+                    {
+                        endDate = Date.from(Instant.parse(end));
+                    }
+                    else {
+                        DateFormat formatter = new SimpleDateFormat("MM/dd/yy");
+                        endDate = formatter.parse(end);
+                    }
+                    endDate = new Date(endDate.getTime() + JiveConstants.DAY - 1);
+                    search.setDateRangeMax(endDate);
                 }
                 catch (Exception e) {
-                    Log.error("getConversations", e);
-                    throw new ServiceException("Exception", "Bad end date", ExceptionType.ILLEGAL_ARGUMENT_EXCEPTION, Response.Status.BAD_REQUEST);
+                    Log.error("ConversationPDFServlet", e);
                 }
             }
 
@@ -1101,7 +1111,7 @@ public class ChatService {
 
     private void authenticate(String username, String password) throws Exception
     {
-        Log.info("authenticate " + username + " " + Password.passwords.get(username));
+        Log.debug("authenticate " + username + " " + Password.passwords.get(username));
 
         if (Password.passwords.containsKey(username))     // SSO
         {

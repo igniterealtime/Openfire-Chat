@@ -129,7 +129,7 @@ public class XMPPTCPConnection extends AbstractXMPPConnection
 
     @Override
     protected void connectInternal() {
-        Log.info("connectInternal " + config.getXMPPServiceDomain());
+        Log.debug("connectInternal " + config.getXMPPServiceDomain());
 
         connected = true;
         saslFeatureReceived.reportSuccess();
@@ -145,7 +145,7 @@ public class XMPPTCPConnection extends AbstractXMPPConnection
 
     @Override
     protected void shutdown() {
-        Log.info("shutdown " + user);
+        Log.debug("shutdown " + user);
 
         try {
             JID userJid = new JID(user.toString());
@@ -180,7 +180,7 @@ public class XMPPTCPConnection extends AbstractXMPPConnection
     @Override
     protected void loginInternal(String username, String password, Resourcepart resource) throws XMPPException
     {
-        Log.info("loginInternal " + username + " " + password + " " + resource );
+        Log.debug("loginInternal " + username + " " + password + " " + resource );
 
         try {
             AuthToken authToken = null;
@@ -341,7 +341,7 @@ public class XMPPTCPConnection extends AbstractXMPPConnection
 
         public void closeVirtualConnection()
         {
-            Log.info("SmackConnection - close ");
+            Log.debug("SmackConnection - close ");
 
             if (this.connection!= null) this.connection.shutdown();
         }

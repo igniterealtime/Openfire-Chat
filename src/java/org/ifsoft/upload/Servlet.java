@@ -58,7 +58,7 @@ public class Servlet extends HttpServlet
         String name = request.getParameter("name");
         String username = request.getParameter("username");
 
-        Log.info( "Processing PUT request... ({} submitting to {})", request.getRemoteAddr(), request.getRequestURI() );
+        Log.debug( "Processing PUT request... ({} submitting to {})", request.getRemoteAddr(), request.getRequestURI() );
         response.setHeader( "Cache-Control", "max-age=31536000" );
 
         if (name.endsWith(".webm"))
@@ -87,7 +87,7 @@ public class Servlet extends HttpServlet
                 String folder = name.substring(0, name.lastIndexOf("."));
                 String destination = JiveGlobals.getHomeDirectory() + File.separator + "resources" + File.separator + "spank" + File.separator + username + File.separator + folder;
 
-                Log.info( "Extracting application..." + source + " " + destination);
+                Log.debug( "Extracting application..." + source + " " + destination);
 
                 ZipFile zipFile = new ZipFile(path.toFile());
                 zipFile.extractAll(destination);
