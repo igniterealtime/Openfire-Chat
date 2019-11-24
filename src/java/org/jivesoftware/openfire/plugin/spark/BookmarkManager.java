@@ -60,6 +60,8 @@ public class BookmarkManager {
 
     private static final String DOMAIN = XMPPServer.getInstance().getServerInfo().getXMPPDomain();
     private static final MessageRouter MESSAGE_ROUTER = XMPPServer.getInstance().getMessageRouter();
+    private static final UserManager USER_MANAGER = XMPPServer.getInstance().getUserManager().getInstance();
+    private static final PresenceManager PRESENCE_MANAGER = XMPPServer.getInstance().getPresenceManager();
 
     /**
      * Returns the specified bookmark.
@@ -164,8 +166,9 @@ public class BookmarkManager {
         for (String username : bookmark.getUsers())
         {
             Message newMessage = message.createCopy();
-            newMessage.setTo(username + "@" + DOMAIN);
-            MESSAGE_ROUTER.route(newMessage);
+            JID jid = new JID(username + "@" + DOMAIN);
+            newMessage.setTo(jid);
+            routeMessage(jid, newMessage);
         }
 
         GroupManager groupManager = GroupManager.getInstance();
@@ -179,17 +182,32 @@ public class BookmarkManager {
                 {
                     Message newMessage = message.createCopy();
                     newMessage.setTo(memberJID);
-                    MESSAGE_ROUTER.route(newMessage);
+                    routeMessage(memberJID, newMessage);
                 }
 
                 for (JID memberJID : group.getAdmins())
                 {
                     Message newMessage = message.createCopy();
                     newMessage.setTo(memberJID);
-                    MESSAGE_ROUTER.route(newMessage);
+                    routeMessage(memberJID, newMessage);
                 }
 
             } catch (GroupNotFoundException e) { }
+        }
+    }
+
+    private static void routeMessage(JID jid, Message message)
+    {
+        try {
+            User toUser = USER_MANAGER.getUser(jid.getNode());
+            boolean available = PRESENCE_MANAGER.isAvailable(toUser);
+
+            Log.debug("routeMessage " + available + " " + toUser.getName() + "\n" + message.toString());
+
+            if (available) MESSAGE_ROUTER.route(message);
+
+        } catch (Exception e) {
+            Log.error("routeMessage", e);
         }
     }
 

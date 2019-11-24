@@ -1245,7 +1245,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
                                 if (smsTo != null)
                                 {
-                                    if ("nexmo".equals(JiveGlobals.getProperty("ofchat.sms.provider", "nexmo")))
+                                    if ("nexmo".equals(JiveGlobals.getProperty("plugin.ofchat.sms.provider", "nexmo")))
                                     {
                                         org.ifsoft.sms.nexmo.Servlet.smsOutgoing(smsTo, smsFrom, body);
                                     }
@@ -1602,7 +1602,7 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     public void exitAllRooms(JID jid)
     {
-        boolean bruteForceLogoff = JiveGlobals.getBooleanProperty("ofmeet.bruteforce.logoff", false);
+        boolean bruteForceLogoff = JiveGlobals.getBooleanProperty("plugin.ofchat.bruteforce.logoff", false);
 
         if (bruteForceLogoff)
         {
@@ -1980,27 +1980,30 @@ public class RESTServicePlugin implements Plugin, SessionEventListener, Property
 
     public void messageReceived(JID roomJID, JID user, String nickname, Message message)
     {
-        Log.debug("MUC messageReceived " + roomJID + " " + user + " " + nickname + "\n" + message.getBody());
-
-        final String body = message.getBody();
-        final String roomJid = roomJID.toString();
-        final String userJid = user.toBareJID();
-
-        if (body != null)
+        if (JiveGlobals.getBooleanProperty("plugin.ofchat.broadcast.muc.message", true))
         {
-            executor.submit(new Callable<Boolean>()
-            {
-                public Boolean call() throws Exception
-                {
-                    Bookmark bookmark = BookmarkManager.getBookmark(roomJid);
+            Log.debug("MUC messageReceived " + roomJID + " " + user + " " + nickname + "\n" + message.getBody());
 
-                    if ( bookmark != null)
+            final String body = message.getBody();
+            final String roomJid = roomJID.toString();
+            final String userJid = user.toBareJID();
+
+            if (body != null)
+            {
+                executor.submit(new Callable<Boolean>()
+                {
+                    public Boolean call() throws Exception
                     {
-                        BookmarkManager.broadcastMessage(roomJid, userJid, nickname, body, bookmark);
+                        Bookmark bookmark = BookmarkManager.getBookmark(roomJid);
+
+                        if ( bookmark != null)
+                        {
+                            BookmarkManager.broadcastMessage(roomJid, userJid, nickname, body, bookmark);
+                        }
+                        return true;
                     }
-                    return true;
-                }
-            });
+                });
+            }
         }
     }
 
